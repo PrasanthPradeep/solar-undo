@@ -94,6 +94,17 @@ export default function CapacityCard({
         </p>
         <p className="text-lg font-semibold mb-2">Solar Capacity {config.label}</p>
         <p className="text-sm opacity-80 max-w-xs mx-auto">{config.description}</p>
+
+        {derivedStatus === "AVAILABLE" && (
+          <a
+            href="https://ekiran.kseb.in/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-5 inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 shadow-sm ring-1 ring-orange-200 transition-colors hover:bg-orange-50"
+          >
+            Apply on KSEB e-Kiran
+          </a>
+        )}
       </div>
 
       {/* RES stats grid */}
