@@ -8,6 +8,7 @@ import { useEligibilityStore } from "@/store/eligibility-store";
 import ConsumerCard from "@/components/result/ConsumerCard";
 import TransformerCard from "@/components/result/TransformerCard";
 import CapacityCard from "@/components/result/CapacityCard";
+import { formatAsOn } from "@/utils/formatters";
 
 export default function ResultPage() {
   const router = useRouter();
@@ -35,6 +36,11 @@ export default function ResultPage() {
           <p className="text-muted-foreground text-sm">
             Transformer-level solar availability for your KSEB connection
           </p>
+          {transformer.asOn && (
+            <p className="mt-2 text-xs font-medium text-muted-foreground">
+              As on {formatAsOn(transformer.asOn)}
+            </p>
+          )}
 
           {/* Step indicator — all done */}
           <div className="flex items-center justify-center gap-0 mt-5">

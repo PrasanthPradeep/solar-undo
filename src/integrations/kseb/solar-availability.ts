@@ -34,6 +34,8 @@ export interface SolarAvailabilityResponse {
   solarAvailable: boolean;
   /** AVAILABLE (>10 kW headroom) | LIMITED (>0 kW) | FULL (0 kW) */
   status: "AVAILABLE" | "LIMITED" | "FULL";
+  /** ISO timestamp for when this availability report was generated */
+  asOn: string;
 }
 
 export class SolarAvailabilityStageError extends Error {
@@ -169,5 +171,6 @@ export async function getSolarAvailability(
     balanceAvailable: matchedCapacity.balanceAvailable,
     solarAvailable: matchedCapacity.balanceAvailable > 0,
     status,
+    asOn: new Date().toISOString(),
   };
 }

@@ -16,6 +16,6 @@ export interface Transformer {
   gridConnected?: number;
   solarAvailable?: boolean;
   status?: SolarStatus;
+  asOn?: string;
 }
-
 

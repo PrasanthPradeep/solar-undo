@@ -126,6 +126,7 @@ export default function CaptchaForm() {
         gridConnected: result.data.gridConnected,
         solarAvailable: result.data.solarAvailable,
         status: result.data.status,
+        asOn: result.data.asOn,
       });
 
       router.push("/result");

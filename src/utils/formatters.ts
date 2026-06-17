@@ -27,3 +27,21 @@ export function maskConsumerNumber(num: string): string {
   if (num.length < 4) return num;
   return `${"X".repeat(num.length - 4)}${num.slice(-4)}`;
 }
+
+/**
+ * Formats an ISO timestamp for the result page, e.g. "18 Jun 2026, 2:45 pm".
+ */
+export function formatAsOn(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "Asia/Kolkata",
+  }).format(date);
+}

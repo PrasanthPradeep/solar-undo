@@ -28,6 +28,15 @@ export interface BillPdfData {
   transformer: TransformerIdentity;
 }
 
+export class BillViewInvalidDetailsError extends Error {
+  constructor() {
+    super(
+      "Unable to retrieve your KSEB details. Please recheck the consumer number and registered mobile number you entered."
+    );
+    this.name = "BillViewInvalidDetailsError";
+  }
+}
+
 function normalizeTransformerName(value: string) {
   return value
     .replace(/\s+/g, " ")
@@ -45,17 +54,6 @@ function decodeEntities(value: string) {
     .replace(/&gt;/g, ">");
 }
 
-function htmlToText(html: string) {
-  return decodeEntities(
-    html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-  );
-}
-
 function extractOkey(html: string) {
   const match = html.match(/name=["']okey["'][^>]*value=["']([^"']+)/i);
   if (!match?.[1]) {
@@ -68,9 +66,11 @@ function assertPdfResponse(buffer: Buffer, contentType: string) {
   if (buffer.subarray(0, 5).toString("ascii") === "%PDF-") return;
 
   const preview = buffer.toString("utf8", 0, Math.min(buffer.length, 500));
-  const message = /<html|<!doctype/i.test(preview)
-    ? `KSEB BillView returned HTML instead of a PDF: ${htmlToText(preview).slice(0, 220)}`
-    : `KSEB BillView returned ${contentType || "an unknown content type"} instead of a PDF.`;
+  if (/<html|<!doctype|KSEBL-View LT Bill/i.test(preview)) {
+    throw new BillViewInvalidDetailsError();
+  }
+
+  const message = `KSEB BillView returned ${contentType || "an unknown content type"} instead of a PDF.`;
 
   throw new Error(message);
 }
