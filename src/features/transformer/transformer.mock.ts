@@ -6,6 +6,7 @@ export const MOCK_TRANSFORMERS: Transformer[] = [
         officeCode: "PLL001",
         capacity: 100,
         availableSolar: 12.5,
+        availableSolarCapacity: 12.5,
     },
 
     {
@@ -13,6 +14,7 @@ export const MOCK_TRANSFORMERS: Transformer[] = [
         officeCode: "KLM002",
         capacity: 160,
         availableSolar: 4.8,
+        availableSolarCapacity: 4.8,
     },
 
     {
@@ -20,5 +22,6 @@ export const MOCK_TRANSFORMERS: Transformer[] = [
         officeCode: "KLM003",
         capacity: 250,
         availableSolar: 0,
+        availableSolarCapacity: 0,
     },
 ];

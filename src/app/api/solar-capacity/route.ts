@@ -1,13 +1,26 @@
 import { NextResponse } from "next/server";
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const transformerName = searchParams.get("transformer");
+import { fetchResCapacityByOfficeCode, findTransformerMatch } from "@/integrations/kseb/res-capacity";
 
-  // TODO: Integrate real solar capacity data from KSEB
-  return NextResponse.json({
-    success: true,
-    transformer: transformerName,
-    availableSolarCapacity: 12.5,
-  });
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const transformerName = searchParams.get("transformer");
+    const officeCode = searchParams.get("officeCode");
+
+    if (!transformerName || !officeCode) {
+      return NextResponse.json(
+        { success: false, error: "officeCode and transformer are required." },
+        { status: 400 }
+      );
+    }
+
+    const rows = await fetchResCapacityByOfficeCode(officeCode);
+    const data = findTransformerMatch(transformerName, rows);
+
+    return NextResponse.json({ success: true, data });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "KSEB RES capacity lookup failed.";
+    return NextResponse.json({ success: false, error: message }, { status: 502 });
+  }
 }

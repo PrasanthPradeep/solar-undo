@@ -1,28 +1,61 @@
-import { ksebPost } from "./kseb.client";
+import { ksebGetBuffer, ksebGetResponse, ksebPostForm } from "./kseb.client";
 
 export interface CaptchaChallenge {
-  sessionId: string;
+  captchaUniqueIdHidden: string;
   imageBase64: string;
+  contentType: string;
+  jsessionId: string;
 }
 
-export interface CaptchaVerifyResult {
-  valid: boolean;
+function readJSessionId(setCookie: string | null, fallback?: string) {
+  const match = setCookie?.match(/\bJSESSIONID=([^;]+)/);
+  if (!match?.[1] && fallback) return fallback;
+  if (!match?.[1]) {
+    throw new Error("KSEB QuickPay did not return a JSESSIONID cookie.");
+  }
+  return match[1];
 }
 
-/**
- * Requests a new CAPTCHA image from the KSEB portal.
- * TODO: Map to the real KSEB captcha endpoint.
- */
+function createCaptchaUniqueId() {
+  return String(Date.now() + Math.floor(Math.random() * 10000) + 10000);
+}
+
+export function ksebSessionCookie(jsessionId: string) {
+  return `JSESSIONID=${jsessionId}`;
+}
+
 export async function getCaptchaChallenge(): Promise<CaptchaChallenge> {
-  return ksebPost<CaptchaChallenge>("/captcha/generate", {});
-}
+  const quickPayResponse = await ksebGetResponse("/selfservices/quickpay");
+  let jsessionId = readJSessionId(quickPayResponse.headers.get("set-cookie"));
 
-/**
- * Submits the user's CAPTCHA answer for server-side verification.
- */
-export async function verifyCaptcha(
-  sessionId: string,
-  userAnswer: string
-): Promise<CaptchaVerifyResult> {
-  return ksebPost<CaptchaVerifyResult>("/captcha/verify", { sessionId, userAnswer });
+  const uniqueIdResponse = await ksebPostForm(
+    "/selfservices/getUniqueId",
+    {},
+    {
+      headers: {
+        Cookie: ksebSessionCookie(jsessionId),
+        Referer: "https://wss.kseb.in/selfservices/quickpay",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+    }
+  );
+  jsessionId = readJSessionId(uniqueIdResponse.headers.get("set-cookie"), jsessionId);
+
+  const captchaUniqueIdHidden = createCaptchaUniqueId();
+  const { buffer, contentType } = await ksebGetBuffer(
+    `/selfservices/simpleImg.image?uniqId=${encodeURIComponent(captchaUniqueIdHidden)}`,
+    {
+      headers: {
+        Cookie: ksebSessionCookie(jsessionId),
+        Referer: "https://wss.kseb.in/selfservices/quickpay",
+      },
+    }
+  );
+
+  return {
+    captchaUniqueIdHidden,
+    imageBase64: buffer.toString("base64"),
+    contentType,
+    jsessionId,
+  };
 }

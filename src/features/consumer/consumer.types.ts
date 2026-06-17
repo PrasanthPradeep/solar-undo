@@ -6,4 +6,5 @@ export interface Consumer {
     tariff: string;
     billNo: string;
     dtr: string;
+    officeCode?: string;
 }
