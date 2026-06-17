@@ -7,4 +7,5 @@ export interface Consumer {
     billNo: string;
     dtr: string;
     officeCode?: string;
+    office_phone?: string;
 }

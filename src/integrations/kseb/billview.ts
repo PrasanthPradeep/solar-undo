@@ -18,6 +18,7 @@ export interface BillPdfMetadata {
   consumerName: string;
   consumerNumber: string;
   sectionName: string;
+  officePhone: string;
   billNo: string;
   tariff: string;
 }
@@ -137,6 +138,7 @@ export function extractBillMetadataFromText(text: string): BillPdfMetadata {
     consumerName: readMatch(text, [/Name\s*&\s*Mailing Address\s*\n\s*([^\n]+)/i]),
     consumerNumber: readMatch(text, [/Consumer#\s*\n?\s*(\d{13})/i]),
     sectionName,
+    officePhone: readMatch(text, [/Phone#\s*([0-9+\-\s]+)/i]),
     billNo: readMatch(text, [/Bill#\s*\n?\s*(\d+)/i]),
     tariff: readMatch(text, [/Tariff\/Phase\s*([A-Z0-9-]+)/i]),
   };

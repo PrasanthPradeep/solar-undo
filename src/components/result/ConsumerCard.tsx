@@ -11,6 +11,7 @@ export default function ConsumerCard({ consumer }: Props) {
     { label: "Section", value: consumer.section || "—" },
     { label: "Tariff", value: consumer.tariff || "—" },
     { label: "Bill No.", value: consumer.billNo || "—", mono: true },
+    { label: "Office Phone", value: consumer.office_phone || "—", mono: true },
   ];
 
   return (

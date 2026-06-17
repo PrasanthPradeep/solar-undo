@@ -10,6 +10,7 @@ export interface SolarAvailabilityResponse {
   consumerName: string;
   consumerNumber: string;
   sectionName: string;
+  office_phone: string;
   billNo: string;
   tariff: string;
   /** Matched and normalised transformer name from the RES dataset */
@@ -154,6 +155,7 @@ export async function getSolarAvailability(
     consumerName,
     consumerNumber,
     sectionName,
+    office_phone: billData.metadata.officePhone,
     billNo,
     tariff,
     transformerName: matchedCapacity.transformerName,

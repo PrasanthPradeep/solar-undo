@@ -111,6 +111,7 @@ export default function CaptchaForm() {
         billNo: result.data.billNo,
         dtr: result.data.transformerName,
         officeCode: result.data.officeCode,
+        office_phone: result.data.office_phone,
       });
       setTransformer({
         name: result.data.transformerName,
