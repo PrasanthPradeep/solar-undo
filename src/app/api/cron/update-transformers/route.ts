@@ -8,12 +8,14 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 function isAuthorized(request: Request) {
-  if (!env.CAPACITY_SYNC_SECRET) return env.NODE_ENV !== "production";
-  const header = request.headers.get("authorization") ?? "";
-  return header === `Bearer ${env.CAPACITY_SYNC_SECRET}`;
+  const secret = env.CRON_SECRET || env.CAPACITY_SYNC_SECRET;
+  if (!secret) return env.NODE_ENV !== "production";
+
+  const authHeader = request.headers.get("authorization") ?? "";
+  return authHeader === `Bearer ${secret}`;
 }
 
-export async function POST(request: Request) {
+export async function GET(request: Request) {
   if (!isAuthorized(request)) {
     return NextResponse.json({ success: false, error: "Unauthorized." }, { status: 401 });
   }

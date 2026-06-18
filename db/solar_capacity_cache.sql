@@ -57,6 +57,24 @@ create table if not exists public.consumer_transformers (
   updated_at timestamptz not null default now()
 );
 
+alter table public.consumer_transformers
+  add column if not exists consumer_name text;
+
+alter table public.consumer_transformers
+  add column if not exists section_name text;
+
+alter table public.consumer_transformers
+  add column if not exists tariff text;
+
+alter table public.consumer_transformers
+  add column if not exists bill_no text;
+
+alter table public.consumer_transformers
+  add column if not exists mobile text;
+
+alter table public.consumer_transformers
+  add column if not exists office_phone text;
+
 create index if not exists transformers_section_idx
   on public.transformers (section_code);
 
@@ -87,6 +105,9 @@ end $$;
 
 do $$
 begin
+  alter table public.transformer_history
+    drop constraint if exists transformer_history_recorded_date_key;
+
   if not exists (
     select 1 from pg_constraint where conname = 'transformer_history_transformer_id_recorded_date_key'
   ) then
@@ -105,3 +126,5 @@ grant usage on schema public to service_role;
 grant select, insert, update, delete on public.transformers to service_role;
 grant select, insert, update, delete on public.transformer_history to service_role;
 grant select, insert, update, delete on public.consumer_transformers to service_role;
+
+notify pgrst, 'reload schema';

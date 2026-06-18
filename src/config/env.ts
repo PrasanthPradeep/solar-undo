@@ -18,6 +18,9 @@ export const env = {
   /** Server-only Supabase service role key for cache reads/writes. */
   SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
 
-  /** Optional bearer token for cron/scheduler calls to /api/capacity-sync. */
+  /** Bearer token Vercel Cron sends to /api/cron/update-transformers. */
+  CRON_SECRET: process.env.CRON_SECRET ?? "",
+
+  /** Optional bearer token for manual/scheduler calls to /api/capacity-sync. */
   CAPACITY_SYNC_SECRET: process.env.CAPACITY_SYNC_SECRET ?? "",
 } as const;

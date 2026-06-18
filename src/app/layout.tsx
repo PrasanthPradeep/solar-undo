@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import PwaRegistration from "@/components/common/PwaRegistration";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -49,6 +50,12 @@ export const metadata: Metadata = {
   creator: "Prasanth P",
   publisher: "Solar ഉണ്ടോ?",
   applicationName: "Solar ഉണ്ടോ?",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Solar Undo",
+    statusBarStyle: "default",
+  },
   openGraph: {
     title: "Solar ഉണ്ടോ?",
     description:
@@ -94,6 +101,10 @@ export const metadata: Metadata = {
   },
 };
 
+export const viewport: Viewport = {
+  themeColor: "#f97316",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -101,7 +112,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${geistMono.variable} h-full`}>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <PwaRegistration />
+      </body>
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-B7MGNTVSGV"
         strategy="afterInteractive"
