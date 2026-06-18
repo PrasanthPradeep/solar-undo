@@ -35,20 +35,22 @@ export default function Footer() {
           </p> */}
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:justify-end">
+        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
           <p className="text-xs font-semibold text-foreground">Made with ❤️ in Keralam by Prasanth P</p>
-          {creatorLinks.map(({ label, href, icon: Icon }) => (
-            <a
-              key={label}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-8 items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-              <span>{label}</span>
-            </a>
-          ))}
+          <div className="flex flex-nowrap items-center gap-3">
+            {creatorLinks.map(({ label, href, icon: Icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-8 items-center gap-1.5 rounded-md text-xs font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>{label}</span>
+              </a>
+            ))}
+          </div>
         </div>
       </div>
     </footer>

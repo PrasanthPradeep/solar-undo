@@ -2,12 +2,7 @@ import Image, { type StaticImageData } from "next/image";
 import { ArrowDown, ArrowRight, ArrowUp, Info } from "lucide-react";
 
 import { SolarStatus } from "@/features/solar/solar.types";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import availableStatus from "@/components/available.gif";
 import fullStatus from "@/components/Full.gif";
 import limitedStatus from "@/components/limited.gif";
@@ -175,49 +170,47 @@ export default function CapacityCard({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
           RES DTR Statistics
         </h3>
-        <TooltipProvider>
-          <div className="grid grid-cols-2 gap-3">
-            {statRows.map(({ label, value, help, highlight }) => (
-              <div
-                key={label}
-                className="stat-card relative min-h-20 p-3 pr-9"
-                style={
-                  highlight
-                    ? {
-                      borderColor: "var(--primary)",
-                      background: "var(--secondary)",
-                    }
-                    : undefined
-                }
-              >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="absolute right-2.5 top-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label={`About ${label}`}
-                    >
-                      <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" align="end">
-                    <p className="font-semibold text-foreground">{label}</p>
-                    <p className="mt-1">{help}</p>
-                  </TooltipContent>
-                </Tooltip>
+        <div className="grid grid-cols-2 gap-3">
+          {statRows.map(({ label, value, help, highlight }) => (
+            <div
+              key={label}
+              className="stat-card relative min-h-20 p-3 pr-9"
+              style={
+                highlight
+                  ? {
+                    borderColor: "var(--primary)",
+                    background: "var(--secondary)",
+                  }
+                  : undefined
+              }
+            >
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="absolute right-2.5 top-2.5 inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`About ${label}`}
+                  >
+                    <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent side="top" align="end">
+                  <p className="text-sm font-semibold text-foreground">{label}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{help}</p>
+                </PopoverContent>
+              </Popover>
 
-                <p className="mb-0.5 text-xs text-muted-foreground">{label}</p>
-                <p
-                  className={`text-sm font-bold tabular-nums ${highlight ? "text-primary" : ""
-                    }`}
-                  style={highlight ? { color: "var(--primary)" } : undefined}
-                >
-                  {value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </TooltipProvider>
+              <p className="mb-0.5 text-xs text-muted-foreground">{label}</p>
+              <p
+                className={`text-sm font-bold tabular-nums ${highlight ? "text-primary" : ""
+                  }`}
+                style={highlight ? { color: "var(--primary)" } : undefined}
+              >
+                {value}
+              </p>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
