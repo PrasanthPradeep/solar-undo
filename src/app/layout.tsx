@@ -11,8 +11,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://solarundo.prasanthp.tech"),
   title: {
-    default: "Solar ഉണ്ടോ? | Solar Undo? | KSEB Solar Slot Availability Checker",
-    template: "%s | Solar ഉണ്ടോ?",
+    default: "Solar Undo? | KSEB Solar Slot Availability Checker",
+    template: "%s | Solar Undo?",
   },
   description:
     "Check rooftop solar capacity availability for your KSEB connection. Find your transformer (DTR), available solar headroom, and transformer-wise feasibility before applying for rooftop solar.",
