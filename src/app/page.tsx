@@ -1,9 +1,25 @@
 import AppLogo from "@/components/common/AppLogo";
 import ConsumerForm from "@/components/forms/ConsumerForm";
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Solar ഉണ്ടോ?",
+  applicationCategory: "UtilityApplication",
+  description: "Check KSEB transformer-wise rooftop solar capacity availability.",
+  url: "https://solarundo.prasanthp.tech",
+};
+
 export default function HomePage() {
   return (
     <main className="solar-gradient min-h-screen flex flex-col items-center justify-center p-6">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
+
       {/* Header */}
       <div className="w-full max-w-md mb-8 text-center">
         <AppLogo size="lg" className="mb-6" />
