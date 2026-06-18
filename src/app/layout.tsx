@@ -10,13 +10,19 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL("https://solarundo.prasanthp.tech"),
   title: {
-    default: "Solar ഉണ്ടോ? | KSEB Solar Slot Availability Checker",
+    default: "Solar ഉണ്ടോ? | Solar Undo? | KSEB Solar Slot Availability Checker",
     template: "%s | Solar ഉണ്ടോ?",
   },
   description:
     "Check rooftop solar capacity availability for your KSEB connection. Find your transformer (DTR), available solar headroom, and transformer-wise feasibility before applying for rooftop solar.",
   keywords: [
     "Solar Undo",
+    "Solar Undo App",
+    "Solar Undo KSEB",
+    "Solar Undo Kerala",
+    "Solar ekiran",
+    "Solar Undo Slot Checker",
+    "Solar Undo Slot Checker App",
     "Solar ഉണ്ടോ",
     "KSEB Solar Slot Checker",
     "KSEB Solar Availability",
