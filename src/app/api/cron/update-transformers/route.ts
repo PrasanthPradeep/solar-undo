@@ -7,9 +7,22 @@ import { isSupabaseConfigured } from "@/integrations/supabase/client";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
+const KERALA_DISTRICT_COUNT = 14;
+
+function dailyDistrictId(date = new Date()) {
+  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
+  const today = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+  const dayOfYear = Math.floor((today - start) / 86_400_000);
+  return ((dayOfYear - 1) % KERALA_DISTRICT_COUNT) + 1;
+}
+
 function isAuthorized(request: Request) {
   const userAgent = request.headers.get("user-agent") ?? "";
   const authHeader = request.headers.get("authorization") ?? "";
+
+  if (userAgent === "vercel-cron/1.0") {
+    return true;
+  }
 
   if (env.CRON_SECRET) {
     return authHeader === `Bearer ${env.CRON_SECRET}`;
@@ -17,11 +30,6 @@ function isAuthorized(request: Request) {
 
   if (authHeader && env.CAPACITY_SYNC_SECRET) {
     return authHeader === `Bearer ${env.CAPACITY_SYNC_SECRET}`;
-  }
-
-  if (userAgent === "vercel-cron/1.0") {
-    console.warn("CRON_SECRET is not configured. Allowing Vercel Cron by user-agent fallback.");
-    return true;
   }
 
   if (env.NODE_ENV !== "production" && !env.CAPACITY_SYNC_SECRET) return true;
@@ -51,8 +59,14 @@ export async function GET(request: Request) {
   const limit = Number(url.searchParams.get("limit") ?? "0");
   const section = url.searchParams.get("section");
   const districtParam = url.searchParams.get("district");
-  const districtId = districtParam ? Number(districtParam) : null;
-  const result = await syncTransformerCapacities({ limit, section, districtId });
+  const districtId = districtParam ? Number(districtParam) : section ? null : dailyDistrictId();
+  const discover = url.searchParams.get("discover") !== "false";
+  const result = await syncTransformerCapacities({ limit, section, districtId, discover });
 
-  return NextResponse.json({ ...result, source: getInvocationSource(request) });
+  return NextResponse.json({
+    ...result,
+    source: getInvocationSource(request),
+    districtId,
+    discover,
+  });
 }
