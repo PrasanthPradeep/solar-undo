@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -101,6 +102,18 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistMono.variable} h-full`}>
       <body className="min-h-full flex flex-col">{children}</body>
+      <Script
+        src="https://www.googletagmanager.com/gtag/js?id=G-B7MGNTVSGV"
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-B7MGNTVSGV');
+        `}
+      </Script>
     </html>
   );
 }
