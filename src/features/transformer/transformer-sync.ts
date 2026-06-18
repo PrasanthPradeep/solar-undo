@@ -1,4 +1,4 @@
-import { upsertHistory, upsertTransformer } from "@/features/transformer/transformer-cache";
+import { getKnownSectionCodes, upsertHistory, upsertTransformer } from "@/features/transformer/transformer-cache";
 import { getOfficeList, getOfficesByDistrict } from "@/integrations/kseb/office-map";
 import { fetchResCapacityByOfficeCode } from "@/integrations/kseb/res-capacity";
 
@@ -6,6 +6,8 @@ export interface TransformerSyncOptions {
   limit?: number;
   section?: string | null;
   districtId?: number | null;
+  /** discover=true: scan ALL sections in the district (slow). Default: only refresh known DB sections. */
+  discover?: boolean;
   concurrency?: number;
 }
 
@@ -31,20 +33,38 @@ function isEmptySectionError(error: unknown): boolean {
 export async function syncTransformerCapacities(
   options: TransformerSyncOptions = {}
 ): Promise<TransformerSyncResult> {
-  // When a districtId is given, only fetch that district's sections (1 API call instead of 14)
-  const allOffices =
-    options.districtId != null
+  let selectedOffices: Array<{ officeCode: string; sectionName: string }>;
+
+  if (options.section) {
+    // Single-section override
+    const all = options.districtId != null
       ? await getOfficesByDistrict(options.districtId)
       : await getOfficeList();
+    selectedOffices = all.filter((o) => o.officeCode === options.section);
+  } else if (options.districtId != null && options.discover) {
+    // Full district discovery scan (slow — use sparingly)
+    selectedOffices = await getOfficesByDistrict(options.districtId);
+  } else if (options.districtId != null) {
+    // Refresh only known sections in this district
+    const [districtOffices, knownCodes] = await Promise.all([
+      getOfficesByDistrict(options.districtId),
+      getKnownSectionCodes(),
+    ]);
+    const knownSet = new Set(knownCodes);
+    selectedOffices = districtOffices.filter((o) => knownSet.has(o.officeCode));
+  } else {
+    // No district specified — refresh all known sections across all districts
+    const knownCodes = await getKnownSectionCodes();
+    const all = await getOfficeList();
+    const knownSet = new Set(knownCodes);
+    selectedOffices = all.filter((o) => knownSet.has(o.officeCode));
+  }
 
-  const offices = options.section
-    ? allOffices.filter((office) => office.officeCode === options.section)
-    : allOffices;
+  if (options.limit && options.limit > 0) {
+    selectedOffices = selectedOffices.slice(0, options.limit);
+  }
 
-  const selectedOffices =
-    options.limit && options.limit > 0 ? offices.slice(0, options.limit) : offices;
   const concurrency = Math.min(Math.max(options.concurrency ?? 8, 1), 16);
-
   let transformers = 0;
   const failures: TransformerSyncResult["failures"] = [];
 
@@ -78,7 +98,9 @@ export async function syncTransformerCapacities(
   }
 
   await Promise.all(
-    Array.from({ length: Math.min(concurrency, selectedOffices.length) }, () => syncNextOffice())
+    Array.from({ length: Math.min(concurrency, selectedOffices.length || 1) }, () =>
+      syncNextOffice()
+    )
   );
 
   return {

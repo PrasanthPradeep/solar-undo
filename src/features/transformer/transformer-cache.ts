@@ -3,6 +3,15 @@ import { SolarAvailabilityResponse } from "@/integrations/kseb/solar-availabilit
 import { normalizeTransformerName, ResTransformerCapacity } from "@/integrations/kseb/res-capacity";
 import { supabaseRest, SupabaseUnavailableError } from "@/integrations/supabase/client";
 
+/** Returns the distinct section_codes of all transformers already cached in the DB. */
+export async function getKnownSectionCodes(): Promise<string[]> {
+  const rows = await supabaseRest<Array<{ section_code: string }>>(
+    "transformers?select=section_code&order=section_code"
+  );
+  const unique = [...new Set(rows.map((r) => r.section_code))];
+  return unique;
+}
+
 export interface CapacityTrendPoint {
   date: string;
   availableKw: number;
