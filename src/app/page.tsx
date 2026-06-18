@@ -100,7 +100,7 @@ export default function HomePage() {
         <FAQSection />
       </div>
 
-      <div className="mt-auto w-screen pt-5">
+      <div className="mt-auto w-full pt-5">
         <Footer />
       </div>
     </main>

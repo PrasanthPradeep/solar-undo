@@ -123,7 +123,7 @@ export default function ResultPage() {
             : "Data sourced live from KSEB Renewable Energy Systems (RES) portal."}
         </p>
       </div>
-      <div className="mt-8 -mx-4">
+      <div className="mt-8">
         <Footer />
       </div>
     </main>

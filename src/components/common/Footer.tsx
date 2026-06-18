@@ -20,7 +20,7 @@ const creatorLinks = [
 
 export default function Footer() {
   return (
-    <footer className="w-screen border-t border-border/70 bg-[oklch(0.62_0.19_55_/_0.07)] px-4 py-3 backdrop-blur-sm sm:px-8 lg:px-12">
+    <footer className="w-full border-t border-border/70 bg-[oklch(0.62_0.19_55_/_0.07)] px-4 py-3 backdrop-blur-sm sm:px-8 lg:px-12">
       <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 sm:flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
