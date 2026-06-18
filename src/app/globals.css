@@ -271,6 +271,11 @@
   color: var(--muted-foreground);
   border: 1.5px solid var(--border);
 }
+.home-step-dot {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0.9rem;
+}
 
 /* Spinner */
 @keyframes spin {

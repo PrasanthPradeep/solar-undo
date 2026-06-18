@@ -97,7 +97,7 @@ export default function ConsumerForm() {
     <form onSubmit={handleSubmit} className="space-y-5" noValidate>
       {/* Consumer Number */}
       <div className="space-y-1.5">
-        <label htmlFor="consumer-number" className="block text-sm font-medium text-foreground">
+        <label htmlFor="consumer-number" className="block text-base font-medium text-foreground">
           Consumer Number
         </label>
         <input
@@ -110,7 +110,7 @@ export default function ConsumerForm() {
             if (errors.consumerNumber) setErrors((p) => ({ ...p, consumerNumber: undefined }));
           }}
           maxLength={INPUT_LIMITS.CONSUMER_NUMBER_LENGTH}
-          className="input-premium w-full rounded-xl px-4 py-3 text-sm"
+          className="input-premium w-full rounded-xl px-4 py-3.5 text-base"
           placeholder="e.g. 114 xxx xxx xx16"
           aria-describedby={errors.consumerNumber ? "cn-error" : undefined}
           aria-invalid={!!errors.consumerNumber}
@@ -143,7 +143,7 @@ export default function ConsumerForm() {
 
       {/* Mobile Number */}
       <div className="space-y-1.5">
-        <label htmlFor="mobile-number" className="block text-sm font-medium text-foreground">
+        <label htmlFor="mobile-number" className="block text-base font-medium text-foreground">
           Registered Mobile Number
           <span className="ml-1 text-xs font-normal text-muted-foreground">(needed once if uncached)</span>
         </label>
@@ -157,7 +157,7 @@ export default function ConsumerForm() {
             if (errors.mobileNumber) setErrors((p) => ({ ...p, mobileNumber: undefined }));
           }}
           maxLength={INPUT_LIMITS.MOBILE_NUMBER_LENGTH}
-          className="input-premium w-full rounded-xl px-4 py-3 text-sm"
+          className="input-premium w-full rounded-xl px-4 py-3.5 text-base"
           placeholder="e.g. 984 xxx xxxx"
           aria-describedby={errors.mobileNumber ? "mob-error" : undefined}
           aria-invalid={!!errors.mobileNumber}
@@ -173,7 +173,7 @@ export default function ConsumerForm() {
         id="check-eligibility-btn"
         type="submit"
         disabled={loading}
-        className="btn-solar w-full rounded-xl py-3.5 text-sm font-semibold"
+        className="btn-solar w-full rounded-xl py-3.5 text-base font-semibold"
       >
         {loading ? "Checking cache..." : "Continue"}
       </button>
