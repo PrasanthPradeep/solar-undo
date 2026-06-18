@@ -68,6 +68,10 @@ function isMissingConflictConstraintError(error: unknown) {
   return error instanceof Error && error.message.includes('"code":"42P10"');
 }
 
+function isDuplicateKeyError(error: unknown) {
+  return error instanceof Error && error.message.includes('"code":"23505"');
+}
+
 function isMissingColumnError(error: unknown) {
   return error instanceof Error && error.message.includes("PGRST204");
 }
@@ -268,8 +272,10 @@ export async function upsertTransformer(
       body: [body],
     });
   } catch (error) {
-    if (!isMissingConflictConstraintError(error)) throw error;
+    if (!isMissingConflictConstraintError(error) && !isDuplicateKeyError(error)) throw error;
 
+    // Fallback: composite unique constraint missing or transformer_name-only constraint fired.
+    // Find the existing row by (section_code, transformer_name) and PATCH it.
     const existing = await supabaseRest<TransformerRow[]>(
       `transformers?section_code=eq.${encodeURIComponent(sectionCode)}` +
         `&transformer_name=eq.${encodeURIComponent(transformerName)}` +
