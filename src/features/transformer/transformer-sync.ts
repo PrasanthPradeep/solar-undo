@@ -1,5 +1,5 @@
 import { upsertHistory, upsertTransformer } from "@/features/transformer/transformer-cache";
-import { getOfficeList } from "@/integrations/kseb/office-map";
+import { getOfficeList, getOfficesByDistrict } from "@/integrations/kseb/office-map";
 import { fetchResCapacityByOfficeCode } from "@/integrations/kseb/res-capacity";
 
 export interface TransformerSyncOptions {
@@ -17,18 +17,33 @@ export interface TransformerSyncResult {
   timestamp: string;
 }
 
+/** KSEB returns these errors for sections that simply have no registered transformers yet — not real failures. */
+function isEmptySectionError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  return (
+    error.message.includes("no transformer data") ||
+    error.message.includes("not have any registered transformers") ||
+    error.message.includes("could not be parsed") ||
+    error.message.includes("non-JSON response")
+  );
+}
+
 export async function syncTransformerCapacities(
   options: TransformerSyncOptions = {}
 ): Promise<TransformerSyncResult> {
-  const allOffices = await getOfficeList();
+  // When a districtId is given, only fetch that district's sections (1 API call instead of 14)
+  const allOffices =
+    options.districtId != null
+      ? await getOfficesByDistrict(options.districtId)
+      : await getOfficeList();
+
   const offices = options.section
     ? allOffices.filter((office) => office.officeCode === options.section)
-    : options.districtId != null
-      ? allOffices.filter((office) => office.districtId === options.districtId)
-      : allOffices;
+    : allOffices;
+
   const selectedOffices =
     options.limit && options.limit > 0 ? offices.slice(0, options.limit) : offices;
-  const concurrency = Math.min(Math.max(options.concurrency ?? 4, 1), 8);
+  const concurrency = Math.min(Math.max(options.concurrency ?? 8, 1), 16);
 
   let transformers = 0;
   const failures: TransformerSyncResult["failures"] = [];
@@ -51,6 +66,8 @@ export async function syncTransformerCapacities(
           }
         }
       } catch (error) {
+        // Sections with no transformers are expected — don't count as failures
+        if (isEmptySectionError(error)) continue;
         failures.push({
           sectionCode: office.officeCode,
           sectionName: office.sectionName,
