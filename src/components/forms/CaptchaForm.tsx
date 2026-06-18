@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { useEligibilityStore } from "@/store/eligibility-store";
+import { trackEvent } from "@/lib/analytics";
 
 class VerificationError extends Error {
   constructor(message: string, public readonly stage?: string) {
@@ -83,6 +84,7 @@ export default function CaptchaForm() {
 
     setLoading(true);
     setError(null);
+    trackEvent("captcha_completed");
 
     try {
       const response = await fetch("/api/verify", {
@@ -100,6 +102,22 @@ export default function CaptchaForm() {
       if (!response.ok || !result.success) {
         throw new VerificationError(result.error || "Failed to verify consumer", result.stage);
       }
+
+      trackEvent("verification_success", {
+        section_name: result.data.sectionName,
+        consumer_tariff: result.data.tariff,
+      });
+      trackEvent("pdf_fetched");
+      trackEvent("transformer_identified", {
+        section_name: result.data.sectionName,
+        transformer_name: result.data.transformerName,
+      });
+      trackEvent("solar_check", {
+        section_name: result.data.sectionName,
+        transformer_name: result.data.transformerName,
+        balance_available: result.data.balanceAvailable,
+        solar_status: result.data.status,
+      });
 
       setCaptcha(captchaUniqueIdHidden, captchaCode);
       setConsumer({
@@ -135,6 +153,9 @@ export default function CaptchaForm() {
       setError(message);
 
       const stage = err instanceof VerificationError ? err.stage : undefined;
+      trackEvent("verification_failed", {
+        failure_stage: stage ?? "unknown",
+      });
       if (stage === "quickpay" || (!stage && /captcha|session/i.test(message))) {
         await loadCaptcha({ keepError: true });
       }

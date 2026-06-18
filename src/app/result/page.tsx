@@ -9,6 +9,7 @@ import ConsumerCard from "@/components/result/ConsumerCard";
 import TransformerCard from "@/components/result/TransformerCard";
 import CapacityCard from "@/components/result/CapacityCard";
 import { formatAsOn } from "@/utils/formatters";
+import { trackEvent } from "@/lib/analytics";
 
 export default function ResultPage() {
   const router = useRouter();
@@ -19,7 +20,16 @@ export default function ResultPage() {
   useEffect(() => {
     if (!consumer || !transformer) {
       router.replace("/");
+      return;
     }
+
+    trackEvent("result_shown", {
+      section_name: consumer.section,
+      transformer_name: transformer.name,
+      balance_available: transformer.availableSolar,
+      consumer_tariff: consumer.tariff,
+      solar_status: transformer.status,
+    });
   }, [consumer, transformer, router]);
 
   if (!consumer || !transformer) return null;

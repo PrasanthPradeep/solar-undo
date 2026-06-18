@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useEligibilityStore } from "@/store/eligibility-store";
 import { INPUT_LIMITS } from "@/constants/limits";
+import { trackEvent } from "@/lib/analytics";
 
 export default function ConsumerForm() {
   const router = useRouter();
@@ -28,6 +29,7 @@ export default function ConsumerForm() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
+    trackEvent("consumer_details_submitted");
     setConsumerDetails(consumerNumber, mobileNumber);
     router.push("/verify");
   };
