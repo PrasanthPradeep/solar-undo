@@ -1,7 +1,13 @@
 import Image, { type StaticImageData } from "next/image";
-import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowRight, ArrowUp, Info } from "lucide-react";
 
 import { SolarStatus } from "@/features/solar/solar.types";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import availableStatus from "@/components/available.gif";
 import fullStatus from "@/components/Full.gif";
 import limitedStatus from "@/components/limited.gif";
@@ -84,13 +90,30 @@ export default function CapacityCard({
         : ArrowDown;
 
   const statRows = [
-    { label: "Allowed Capacity (81%)", value: dtr90Capacity != null ? `${dtr90Capacity} kW` : "—" },
-    { label: "Feasibility Issued", value: feasibilityIssued != null ? `${feasibilityIssued} kW` : "—" },
-    { label: "Registrations", value: registrations != null ? `${registrations} kW` : "—" },
-    { label: "Grid Connected", value: gridConnected != null ? `${gridConnected} kW` : "—" },
+    {
+      label: "Allowed Capacity (81%)",
+      value: dtr90Capacity != null ? `${dtr90Capacity} kW` : "—",
+      help: "Maximum rooftop solar capacity allowed on this transformer.",
+    },
+    {
+      label: "Feasibility Issued",
+      value: feasibilityIssued != null ? `${feasibilityIssued} kW` : "—",
+      help: "Solar capacity already approved through feasibility certificates.",
+    },
+    {
+      label: "Registrations",
+      value: registrations != null ? `${registrations} kW` : "—",
+      help: "Solar applications registered and counted against future capacity.",
+    },
+    {
+      label: "Grid Connected",
+      value: gridConnected != null ? `${gridConnected} kW` : "—",
+      help: "Solar systems already commissioned and connected to the grid.",
+    },
     {
       label: "Balance Available",
       value: `${availableSolar} kW`,
+      help: "Remaining capacity available for new solar applications.",
       highlight: true,
     },
   ];
@@ -126,14 +149,24 @@ export default function CapacityCard({
         <p className="text-sm opacity-80 max-w-xs mx-auto">{config.description}</p>
 
         {derivedStatus === "AVAILABLE" && (
-          <a
-            href="https://ekiran.kseb.in/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-5 inline-flex items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 shadow-sm ring-1 ring-orange-200 transition-colors hover:bg-orange-50"
-          >
-            Apply on KSEB e-Kiran
-          </a>
+          <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
+            <a
+              href="https://ekiran.kseb.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 shadow-sm ring-1 ring-orange-200 transition-colors hover:bg-orange-50 sm:w-auto"
+            >
+              Apply on KSEB e-Kiran
+            </a>
+            <a
+              href="https://pmsuryaghar.gov.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 shadow-sm ring-1 ring-orange-200 transition-colors hover:bg-orange-50 sm:w-auto"
+            >
+              PM Surya Ghar
+            </a>
+          </div>
         )}
       </div>
 
@@ -142,31 +175,49 @@ export default function CapacityCard({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
           RES DTR Statistics
         </h3>
-        <div className="grid grid-cols-2 gap-3">
-          {statRows.map(({ label, value, highlight }) => (
-            <div
-              key={label}
-              className="stat-card p-3"
-              style={
-                highlight
-                  ? {
-                    borderColor: "var(--primary)",
-                    background: "var(--secondary)",
-                  }
-                  : undefined
-              }
-            >
-              <p className="text-xs text-muted-foreground mb-0.5">{label}</p>
-              <p
-                className={`text-sm font-bold tabular-nums ${highlight ? "text-primary" : ""
-                  }`}
-                style={highlight ? { color: "var(--primary)" } : undefined}
+        <TooltipProvider>
+          <div className="grid grid-cols-2 gap-3">
+            {statRows.map(({ label, value, help, highlight }) => (
+              <div
+                key={label}
+                className="stat-card relative min-h-20 p-3 pr-9"
+                style={
+                  highlight
+                    ? {
+                      borderColor: "var(--primary)",
+                      background: "var(--secondary)",
+                    }
+                    : undefined
+                }
               >
-                {value}
-              </p>
-            </div>
-          ))}
-        </div>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="absolute right-2.5 top-2.5 inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-background hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={`About ${label}`}
+                    >
+                      <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" align="end">
+                    <p className="font-semibold text-foreground">{label}</p>
+                    <p className="mt-1">{help}</p>
+                  </TooltipContent>
+                </Tooltip>
+
+                <p className="mb-0.5 text-xs text-muted-foreground">{label}</p>
+                <p
+                  className={`text-sm font-bold tabular-nums ${highlight ? "text-primary" : ""
+                    }`}
+                  style={highlight ? { color: "var(--primary)" } : undefined}
+                >
+                  {value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </TooltipProvider>
       </div>
     </div>
   );

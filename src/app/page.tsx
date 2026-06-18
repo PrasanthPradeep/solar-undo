@@ -1,4 +1,5 @@
 import AppLogo from "@/components/common/AppLogo";
+import FAQSection, { faqs } from "@/components/common/FAQSection";
 import ConsumerForm from "@/components/forms/ConsumerForm";
 
 const structuredData = {
@@ -10,13 +11,32 @@ const structuredData = {
   url: "https://solarundo.prasanthp.tech",
 };
 
+const faqStructuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.question,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.answer,
+    },
+  })),
+};
+
 export default function HomePage() {
   return (
-    <main className="solar-gradient min-h-screen flex flex-col items-center justify-center p-6">
+    <main className="solar-gradient min-h-screen flex flex-col items-center py-10 px-6">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(structuredData),
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqStructuredData),
         }}
       />
 
@@ -74,6 +94,10 @@ export default function HomePage() {
       <p className="mt-6 text-xs text-muted-foreground text-center max-w-xs">
         Your data is sent directly to KSEB servers and is never stored by this service.
       </p>
+
+      <div className="mt-8 w-full">
+        <FAQSection />
+      </div>
     </main>
   );
 }
