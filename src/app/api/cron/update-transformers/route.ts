@@ -8,11 +8,31 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 function isAuthorized(request: Request) {
-  const secret = env.CRON_SECRET || env.CAPACITY_SYNC_SECRET;
-  if (!secret) return env.NODE_ENV !== "production";
-
+  const userAgent = request.headers.get("user-agent") ?? "";
   const authHeader = request.headers.get("authorization") ?? "";
-  return authHeader === `Bearer ${secret}`;
+
+  if (env.CRON_SECRET) {
+    return authHeader === `Bearer ${env.CRON_SECRET}`;
+  }
+
+  if (authHeader && env.CAPACITY_SYNC_SECRET) {
+    return authHeader === `Bearer ${env.CAPACITY_SYNC_SECRET}`;
+  }
+
+  if (userAgent === "vercel-cron/1.0") {
+    console.warn("CRON_SECRET is not configured. Allowing Vercel Cron by user-agent fallback.");
+    return true;
+  }
+
+  if (env.NODE_ENV !== "production" && !env.CAPACITY_SYNC_SECRET) return true;
+
+  return false;
+}
+
+function getInvocationSource(request: Request) {
+  const userAgent = request.headers.get("user-agent") ?? "";
+  if (userAgent === "vercel-cron/1.0") return "vercel-cron";
+  return "manual";
 }
 
 export async function GET(request: Request) {
@@ -30,7 +50,9 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const limit = Number(url.searchParams.get("limit") ?? "0");
   const section = url.searchParams.get("section");
-  const result = await syncTransformerCapacities({ limit, section });
+  const districtParam = url.searchParams.get("district");
+  const districtId = districtParam ? Number(districtParam) : null;
+  const result = await syncTransformerCapacities({ limit, section, districtId });
 
-  return NextResponse.json(result);
+  return NextResponse.json({ ...result, source: getInvocationSource(request) });
 }

@@ -1,8 +1,18 @@
 {
   "crons": [
-    {
-      "path": "/api/cron/update-transformers",
-      "schedule": "0 19 * * *"
-    }
+    { "path": "/api/cron/update-transformers?district=1",  "schedule": "0 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=2",  "schedule": "2 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=3",  "schedule": "4 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=4",  "schedule": "6 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=5",  "schedule": "8 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=6",  "schedule": "10 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=7",  "schedule": "12 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=8",  "schedule": "14 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=9",  "schedule": "16 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=10", "schedule": "18 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=11", "schedule": "20 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=12", "schedule": "22 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=13", "schedule": "24 19 * * *" },
+    { "path": "/api/cron/update-transformers?district=14", "schedule": "26 19 * * *" }
   ]
 }

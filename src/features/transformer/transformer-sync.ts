@@ -5,6 +5,7 @@ import { fetchResCapacityByOfficeCode } from "@/integrations/kseb/res-capacity";
 export interface TransformerSyncOptions {
   limit?: number;
   section?: string | null;
+  districtId?: number | null;
   concurrency?: number;
 }
 
@@ -19,9 +20,12 @@ export interface TransformerSyncResult {
 export async function syncTransformerCapacities(
   options: TransformerSyncOptions = {}
 ): Promise<TransformerSyncResult> {
+  const allOffices = await getOfficeList();
   const offices = options.section
-    ? (await getOfficeList()).filter((office) => office.officeCode === options.section)
-    : await getOfficeList();
+    ? allOffices.filter((office) => office.officeCode === options.section)
+    : options.districtId != null
+      ? allOffices.filter((office) => office.districtId === options.districtId)
+      : allOffices;
   const selectedOffices =
     options.limit && options.limit > 0 ? offices.slice(0, options.limit) : offices;
   const concurrency = Math.min(Math.max(options.concurrency ?? 4, 1), 8);

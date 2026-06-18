@@ -4,6 +4,7 @@ export interface KsebOffice {
   officeCode: string;
   fullName: string;
   sectionName: string;
+  districtId: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -37,7 +38,7 @@ let _fetchPromise: Promise<KsebOffice[]> | null = null;
 // Parse the getinputSection response
 // Response format: {"Section Name [5617]": 5617, "Section Name-2 [5618]": 5618, ...}
 // ---------------------------------------------------------------------------
-function parseSectionResponse(json: Record<string, number>): KsebOffice[] {
+function parseSectionResponse(json: Record<string, number>, districtId: number): KsebOffice[] {
   return Object.entries(json).map(([displayName, id]) => {
     // Strip the trailing " [id]" from display name
     const cleanName = displayName.replace(/\s*\[\d+\]\s*$/, "").trim();
@@ -48,6 +49,7 @@ function parseSectionResponse(json: Record<string, number>): KsebOffice[] {
         .replace(/\bElectrical\s+Section\b/gi, "")
         .replace(/\s+/g, " ")
         .trim(),
+      districtId,
     };
   });
 }
@@ -57,7 +59,7 @@ function parseSectionResponse(json: Record<string, number>): KsebOffice[] {
 // ---------------------------------------------------------------------------
 async function fetchAllSections(): Promise<KsebOffice[]> {
   const results = await Promise.allSettled(
-    Object.values(KERALA_DISTRICT_IDS).map(async (districtId) => {
+    Object.entries(KERALA_DISTRICT_IDS).map(async ([, districtId]) => {
       const res = await ksebPostForm(
         "/selfservices/getinputSection",
         { distictid: String(districtId) },
@@ -69,7 +71,7 @@ async function fetchAllSections(): Promise<KsebOffice[]> {
         }
       );
       const json = (await res.json()) as Record<string, number>;
-      return parseSectionResponse(json);
+      return parseSectionResponse(json, districtId);
     })
   );
 
