@@ -24,13 +24,8 @@ function isAuthorized(request: Request) {
     return true;
   }
 
-  if (env.CRON_SECRET) {
-    return authHeader === `Bearer ${env.CRON_SECRET}`;
-  }
-
-  if (authHeader && env.CAPACITY_SYNC_SECRET) {
-    return authHeader === `Bearer ${env.CAPACITY_SYNC_SECRET}`;
-  }
+  const acceptedSecrets = [env.CRON_SECRET, env.CAPACITY_SYNC_SECRET].filter(Boolean);
+  if (acceptedSecrets.some((secret) => authHeader === `Bearer ${secret}`)) return true;
 
   if (env.NODE_ENV !== "production" && !env.CAPACITY_SYNC_SECRET) return true;
 
