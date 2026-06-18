@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import AppLogo from "@/components/common/AppLogo";
+import Footer from "@/components/common/Footer";
 import { useEligibilityStore } from "@/store/eligibility-store";
 import ConsumerCard from "@/components/result/ConsumerCard";
 import TransformerCard from "@/components/result/TransformerCard";
@@ -36,7 +37,7 @@ export default function ResultPage() {
   if (!consumer || !transformer) return null;
 
   return (
-    <main className="solar-gradient min-h-screen py-10 px-4">
+    <main className="solar-gradient min-h-screen py-10 px-4 pb-0">
       <div className="max-w-2xl mx-auto space-y-5">
         {/* Header */}
         <div className="text-center mb-8">
@@ -121,6 +122,9 @@ export default function ResultPage() {
             ? "Data served from the Solar Undo capacity cache."
             : "Data sourced live from KSEB Renewable Energy Systems (RES) portal."}
         </p>
+      </div>
+      <div className="mt-8 -mx-4">
+        <Footer />
       </div>
     </main>
   );

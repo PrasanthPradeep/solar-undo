@@ -1,5 +1,6 @@
 import AppLogo from "@/components/common/AppLogo";
 import FAQSection, { faqs } from "@/components/common/FAQSection";
+import Footer from "@/components/common/Footer";
 import ConsumerForm from "@/components/forms/ConsumerForm";
 
 const structuredData = {
@@ -97,6 +98,10 @@ export default function HomePage() {
 
       <div className="mt-8 w-full">
         <FAQSection />
+      </div>
+
+      <div className="mt-10 w-screen">
+        <Footer />
       </div>
     </main>
   );
