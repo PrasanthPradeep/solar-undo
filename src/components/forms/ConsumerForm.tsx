@@ -9,29 +9,88 @@ import { trackEvent } from "@/lib/analytics";
 export default function ConsumerForm() {
   const router = useRouter();
   const setConsumerDetails = useEligibilityStore((state) => state.setConsumerDetails);
+  const setConsumer = useEligibilityStore((state) => state.setConsumer);
+  const setTransformer = useEligibilityStore((state) => state.setTransformer);
 
   const [consumerNumber, setConsumerNumber] = useState("");
   const [mobileNumber, setMobileNumber] = useState("");
   const [errors, setErrors] = useState<{ consumerNumber?: string; mobileNumber?: string }>({});
+  const [loading, setLoading] = useState(false);
 
-  const validate = () => {
+  const validate = (options?: { requireMobile?: boolean }) => {
     const next: typeof errors = {};
     if (consumerNumber.length !== INPUT_LIMITS.CONSUMER_NUMBER_LENGTH) {
       next.consumerNumber = `Consumer number must be exactly ${INPUT_LIMITS.CONSUMER_NUMBER_LENGTH} digits`;
     }
-    if (mobileNumber.length !== INPUT_LIMITS.MOBILE_NUMBER_LENGTH) {
+    if (options?.requireMobile && mobileNumber.length !== INPUT_LIMITS.MOBILE_NUMBER_LENGTH) {
       next.mobileNumber = `Mobile number must be exactly ${INPUT_LIMITS.MOBILE_NUMBER_LENGTH} digits`;
     }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validate()) return;
     trackEvent("consumer_details_submitted");
     setConsumerDetails(consumerNumber, mobileNumber);
-    router.push("/verify");
+    setLoading(true);
+
+    try {
+      const response = await fetch("/api/consumer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ consumerNumber }),
+      });
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        trackEvent("consumer_cache_hit", {
+          section_name: result.data.sectionName,
+          transformer_name: result.data.transformerName,
+        });
+        setConsumer({
+          consumerNumber: result.data.consumerNumber,
+          consumerName: result.data.consumerName,
+          mobile: mobileNumber,
+          section: result.data.sectionName,
+          tariff: result.data.tariff,
+          billNo: result.data.billNo,
+          dtr: result.data.transformerName,
+          officeCode: result.data.officeCode,
+          office_phone: result.data.office_phone,
+        });
+        setTransformer({
+          name: result.data.transformerName,
+          feederName: result.data.feederName ?? "",
+          dtrCapacity: result.data.dtrCapacity ?? 0,
+          capacity: result.data.dtr90Capacity,
+          availableSolar: result.data.balanceAvailable,
+          availableSolarCapacity: result.data.balanceAvailable,
+          officeCode: result.data.officeCode,
+          feasibilityIssued: result.data.feasibilityIssued,
+          registrations: result.data.registrations,
+          gridConnected: result.data.gridConnected,
+          solarAvailable: result.data.solarAvailable,
+          status: result.data.status,
+          asOn: result.data.asOn,
+          source: result.data.source,
+          history: result.data.history,
+          capacityChange: result.data.capacityChange,
+        });
+        router.push("/result");
+        return;
+      }
+
+      trackEvent("consumer_cache_miss");
+      if (!validate({ requireMobile: true })) return;
+      router.push("/verify");
+    } catch {
+      if (!validate({ requireMobile: true })) return;
+      router.push("/verify");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -86,6 +145,7 @@ export default function ConsumerForm() {
       <div className="space-y-1.5">
         <label htmlFor="mobile-number" className="block text-sm font-medium text-foreground">
           Registered Mobile Number
+          <span className="ml-1 text-xs font-normal text-muted-foreground">(needed once if uncached)</span>
         </label>
         <input
           id="mobile-number"
@@ -112,9 +172,10 @@ export default function ConsumerForm() {
       <button
         id="check-eligibility-btn"
         type="submit"
+        disabled={loading}
         className="btn-solar w-full rounded-xl py-3.5 text-sm font-semibold"
       >
-        Continue to Verification →
+        {loading ? "Checking cache..." : "Continue"}
       </button>
     </form>
   );

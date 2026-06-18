@@ -1,6 +1,11 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
+import {
+  enrichWithHistory,
+  getCachedAvailabilityByConsumer,
+  saveConsumerMapping,
+} from "@/features/transformer/transformer-cache";
 import { getSolarAvailability, SolarAvailabilityStageError } from "@/integrations/kseb/solar-availability";
 import { KSEB_SESSION_COOKIE } from "@/integrations/kseb/session";
 
@@ -26,6 +31,11 @@ export async function POST(request: Request) {
       );
     }
 
+    const cached = await getCachedAvailabilityByConsumer(consumerNumber);
+    if (cached) {
+      return NextResponse.json({ success: true, data: cached });
+    }
+
     if (!jsessionId) {
       return NextResponse.json(
         {
@@ -43,9 +53,11 @@ export async function POST(request: Request) {
       code,
       jsessionId,
     });
+    await saveConsumerMapping(data, phone);
+    const enriched = await enrichWithHistory(data);
 
     // Pass through all fields including new: feederName, dtrCapacity, status
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data: enriched });
   } catch (error) {
     const message = error instanceof Error ? error.message : "KSEB verification failed.";
     const stage = error instanceof SolarAvailabilityStageError ? error.stage : "unknown";

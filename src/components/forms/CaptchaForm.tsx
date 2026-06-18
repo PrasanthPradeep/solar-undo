@@ -145,6 +145,9 @@ export default function CaptchaForm() {
         solarAvailable: result.data.solarAvailable,
         status: result.data.status,
         asOn: result.data.asOn,
+        source: result.data.source,
+        history: result.data.history,
+        capacityChange: result.data.capacityChange,
       });
 
       router.push("/result");

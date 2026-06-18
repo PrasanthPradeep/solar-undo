@@ -11,4 +11,13 @@ export const env = {
 
   /** Whether to use mock data instead of live KSEB API. */
   USE_MOCK: process.env.USE_MOCK === "true" || process.env.NODE_ENV === "development",
+
+  /** Supabase project REST endpoint, e.g. https://xxx.supabase.co. */
+  SUPABASE_URL: process.env.SUPABASE_URL ?? "",
+
+  /** Server-only Supabase service role key for cache reads/writes. */
+  SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+
+  /** Optional bearer token for cron/scheduler calls to /api/capacity-sync. */
+  CAPACITY_SYNC_SECRET: process.env.CAPACITY_SYNC_SECRET ?? "",
 } as const;

@@ -17,5 +17,11 @@ export interface Transformer {
   solarAvailable?: boolean;
   status?: SolarStatus;
   asOn?: string;
+  source?: "cache" | "live";
+  history?: Array<{ date: string; availableKw: number }>;
+  capacityChange?: {
+    deltaKw: number;
+    previousKw: number;
+    currentKw: number;
+  } | null;
 }
-

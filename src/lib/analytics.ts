@@ -1,5 +1,7 @@
 type AnalyticsEventName =
   | "consumer_details_submitted"
+  | "consumer_cache_hit"
+  | "consumer_cache_miss"
   | "captcha_completed"
   | "verification_success"
   | "verification_failed"

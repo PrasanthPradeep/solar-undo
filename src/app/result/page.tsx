@@ -8,6 +8,7 @@ import { useEligibilityStore } from "@/store/eligibility-store";
 import ConsumerCard from "@/components/result/ConsumerCard";
 import TransformerCard from "@/components/result/TransformerCard";
 import CapacityCard from "@/components/result/CapacityCard";
+import CapacityTrendChart from "@/components/result/CapacityTrendChart";
 import { formatAsOn } from "@/utils/formatters";
 import { trackEvent } from "@/lib/analytics";
 
@@ -79,7 +80,10 @@ export default function ResultPage() {
           feasibilityIssued={transformer.feasibilityIssued}
           registrations={transformer.registrations}
           gridConnected={transformer.gridConnected}
+          capacityChange={transformer.capacityChange}
         />
+
+        <CapacityTrendChart points={transformer.history} />
 
         {/* Transformer info */}
         <TransformerCard transformer={transformer} />
@@ -113,7 +117,9 @@ export default function ResultPage() {
         </div>
 
         <p className="text-xs text-center text-muted-foreground pb-4">
-          Data sourced live from KSEB Renewable Energy Systems (RES) portal.
+          {transformer.source === "cache"
+            ? "Data served from the Solar Undo capacity cache."
+            : "Data sourced live from KSEB Renewable Energy Systems (RES) portal."}
         </p>
       </div>
     </main>

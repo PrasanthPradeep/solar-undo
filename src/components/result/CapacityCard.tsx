@@ -1,4 +1,5 @@
 import Image, { type StaticImageData } from "next/image";
+import { ArrowDown, ArrowRight, ArrowUp } from "lucide-react";
 
 import { SolarStatus } from "@/features/solar/solar.types";
 import availableStatus from "@/components/available.gif";
@@ -12,6 +13,11 @@ interface Props {
   feasibilityIssued?: number;
   registrations?: number;
   gridConnected?: number;
+  capacityChange?: {
+    deltaKw: number;
+    previousKw: number;
+    currentKw: number;
+  } | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -54,11 +60,28 @@ export default function CapacityCard({
   feasibilityIssued,
   registrations,
   gridConnected,
+  capacityChange,
 }: Props) {
   const derivedStatus: SolarStatus =
     status ?? (availableSolar > 10 ? "AVAILABLE" : availableSolar > 0 ? "LIMITED" : "FULL");
 
   const config = STATUS_CONFIG[derivedStatus];
+  const changeLabel =
+    !capacityChange || capacityChange.deltaKw === 0
+      ? "No change"
+      : `${capacityChange.deltaKw > 0 ? "+" : "-"}${Math.abs(capacityChange.deltaKw)} kW since yesterday`;
+  const changeTone =
+    !capacityChange || capacityChange.deltaKw === 0
+      ? "var(--muted-foreground)"
+      : capacityChange.deltaKw > 0
+        ? "var(--status-available)"
+        : "var(--status-full)";
+  const ChangeIcon =
+    !capacityChange || capacityChange.deltaKw === 0
+      ? ArrowRight
+      : capacityChange.deltaKw > 0
+        ? ArrowUp
+        : ArrowDown;
 
   const statRows = [
     { label: "Allowed Capacity (81%)", value: dtr90Capacity != null ? `${dtr90Capacity} kW` : "—" },
@@ -93,6 +116,13 @@ export default function CapacityCard({
           {availableSolar} kW
         </p>
         <p className="text-lg font-semibold mb-2">Solar Capacity {config.label}</p>
+        <div
+          className="mx-auto mb-3 inline-flex min-h-8 items-center gap-1.5 rounded-full bg-white/75 px-3 py-1 text-xs font-semibold shadow-sm ring-1 ring-black/5"
+          style={{ color: changeTone }}
+        >
+          <ChangeIcon className="h-3.5 w-3.5" aria-hidden="true" />
+          <span>{changeLabel}</span>
+        </div>
         <p className="text-sm opacity-80 max-w-xs mx-auto">{config.description}</p>
 
         {derivedStatus === "AVAILABLE" && (
