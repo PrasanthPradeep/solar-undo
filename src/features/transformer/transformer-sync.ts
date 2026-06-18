@@ -4,6 +4,7 @@ import { fetchResCapacityByOfficeCode } from "@/integrations/kseb/res-capacity";
 
 export interface TransformerSyncOptions {
   limit?: number;
+  offset?: number;
   section?: string | null;
   districtId?: number | null;
   /** discover=true: scan ALL sections in the district (slow). Default: only refresh known DB sections. */
@@ -14,6 +15,10 @@ export interface TransformerSyncOptions {
 export interface TransformerSyncResult {
   success: boolean;
   sections: number;
+  totalSections: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
   transformers: number;
   failures: Array<{ sectionCode: string; sectionName: string; error: string }>;
   timestamp: string;
@@ -60,9 +65,11 @@ export async function syncTransformerCapacities(
     selectedOffices = all.filter((o) => knownSet.has(o.officeCode));
   }
 
-  if (options.limit && options.limit > 0) {
-    selectedOffices = selectedOffices.slice(0, options.limit);
-  }
+  const totalSections = selectedOffices.length;
+  const offset = Math.max(options.offset ?? 0, 0);
+  const limit = Math.max(options.limit ?? 0, 0);
+  selectedOffices =
+    limit > 0 ? selectedOffices.slice(offset, offset + limit) : selectedOffices.slice(offset);
 
   const concurrency = Math.min(Math.max(options.concurrency ?? 8, 1), 16);
   let transformers = 0;
@@ -106,6 +113,10 @@ export async function syncTransformerCapacities(
   return {
     success: failures.length === 0,
     sections: selectedOffices.length,
+    totalSections,
+    offset,
+    limit,
+    hasMore: offset + selectedOffices.length < totalSections,
     transformers,
     failures,
     timestamp: new Date().toISOString(),

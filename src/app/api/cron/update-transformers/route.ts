@@ -52,11 +52,12 @@ export async function GET(request: Request) {
 
   const url = new URL(request.url);
   const limit = Number(url.searchParams.get("limit") ?? "0");
+  const offset = Number(url.searchParams.get("offset") ?? "0");
   const section = url.searchParams.get("section");
   const districtParam = url.searchParams.get("district");
   const districtId = districtParam ? Number(districtParam) : section ? null : dailyDistrictId();
   const discover = url.searchParams.get("discover") !== "false";
-  const result = await syncTransformerCapacities({ limit, section, districtId, discover });
+  const result = await syncTransformerCapacities({ limit, offset, section, districtId, discover });
 
   return NextResponse.json({
     ...result,
