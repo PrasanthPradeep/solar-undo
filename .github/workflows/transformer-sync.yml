@@ -1,0 +1,87 @@
+name: Daily Transformer Sync
+
+on:
+  schedule:
+    # 12:30 AM IST = 7:00 PM UTC on the previous day.
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+    inputs:
+      start_district:
+        description: "First district id to sync, 1-14"
+        required: false
+        default: "1"
+      end_district:
+        description: "Last district id to sync, 1-14"
+        required: false
+        default: "14"
+      limit:
+        description: "Optional section limit per district; 0 means all"
+        required: false
+        default: "0"
+      discover:
+        description: "Scan all sections in each district"
+        required: false
+        default: "true"
+
+concurrency:
+  group: transformer-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Sync KSEB transformer capacity
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      SYNC_BASE_URL: https://solarundo.prasanthp.tech/api/cron/update-transformers
+      CRON_SECRET: ${{ secrets.SOLAR_UNDO_CRON_SECRET }}
+      START_DISTRICT: ${{ github.event.inputs.start_district || '1' }}
+      END_DISTRICT: ${{ github.event.inputs.end_district || '14' }}
+      LIMIT: ${{ github.event.inputs.limit || '0' }}
+      DISCOVER: ${{ github.event.inputs.discover || 'true' }}
+
+    steps:
+      - name: Validate secret
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing GitHub secret: SOLAR_UNDO_CRON_SECRET"
+            exit 1
+          fi
+
+      - name: Sync districts
+        run: |
+          set -euo pipefail
+
+          echo "Syncing districts $START_DISTRICT to $END_DISTRICT"
+          echo "discover=$DISCOVER limit=$LIMIT"
+
+          for district in $(seq "$START_DISTRICT" "$END_DISTRICT"); do
+            url="${SYNC_BASE_URL}?district=${district}&discover=${DISCOVER}"
+            if [ "$LIMIT" != "0" ]; then
+              url="${url}&limit=${LIMIT}"
+            fi
+
+            echo "::group::District ${district}"
+            tmp_body="$(mktemp)"
+            http_code="$(curl --silent --show-error --location \
+              --max-time 330 \
+              --output "$tmp_body" \
+              --write-out "%{http_code}" \
+              --header "Authorization: Bearer ${CRON_SECRET}" \
+              "$url")"
+
+            cat "$tmp_body"
+            echo
+
+            if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+              echo "District ${district} failed with HTTP ${http_code}"
+              exit 1
+            fi
+
+            echo "::endgroup::"
+
+            if [ "$district" != "$END_DISTRICT" ]; then
+              sleep 60
+            fi
+          done
