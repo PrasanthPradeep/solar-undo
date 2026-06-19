@@ -41,6 +41,7 @@ export interface HistorySnapshot {
 
 interface TransformerRow {
   id: string;
+  kseb_transformer_id: string;
   transformer_name: string;
   feeder_name: string | null;
   section_code: string;
@@ -455,7 +456,7 @@ export async function upsertTransformer(
   sectionName: string
 ) {
   const transformerName = normalizeTransformerName(row.transformerName);
-  const ksebTransformerId = `${sectionCode}:${transformerName}`;
+  const ksebTransformerId = row.ksebTransformerId || `${sectionCode}:${transformerName}`;
   const body = {
     kseb_transformer_id: ksebTransformerId,
     transformer_name: transformerName,
@@ -480,11 +481,17 @@ export async function upsertTransformer(
   } catch (error) {
     if (!isMissingConflictConstraintError(error) && !isDuplicateKeyError(error)) throw error;
 
-    const existing = await supabaseRest<TransformerRow[]>(
-      `transformers?section_code=eq.${encodeURIComponent(sectionCode)}` +
-        `&transformer_name=eq.${encodeURIComponent(transformerName)}` +
-        "&select=*&limit=1"
+    let existing = await supabaseRest<TransformerRow[]>(
+      `transformers?kseb_transformer_id=eq.${encodeURIComponent(ksebTransformerId)}&select=*&limit=1`
     );
+
+    if (!existing[0]) {
+      existing = await supabaseRest<TransformerRow[]>(
+        `transformers?section_code=eq.${encodeURIComponent(sectionCode)}` +
+          `&transformer_name=eq.${encodeURIComponent(transformerName)}` +
+          "&select=*&limit=1"
+      );
+    }
 
     if (existing[0]) {
       return supabaseRest<TransformerRow[]>(`transformers?id=eq.${existing[0].id}&select=*`, {
@@ -572,7 +579,8 @@ export async function syncSectionTransformers(
   const existingTransformers = await supabaseRest<TransformerRow[]>(
     `transformers?section_code=eq.${encodeURIComponent(officeCode)}&select=*`
   );
-  const existingMap = new Map(existingTransformers.map((t) => [t.transformer_name, t]));
+  const existingByNameMap = new Map(existingTransformers.map((t) => [t.transformer_name, t]));
+  const existingByIdMap = new Map(existingTransformers.map((t) => [t.kseb_transformer_id, t]));
 
   let transformers = 0;
   let inserted = 0;
@@ -586,7 +594,9 @@ export async function syncSectionTransformers(
     const newRowsMap = new Map<string, ResTransformerCapacity>();
     for (const row of rows) {
       const normalizedName = normalizeTransformerName(row.transformerName);
-      if (existingMap.has(normalizedName)) {
+      const ksebId = row.ksebTransformerId;
+      const exists = existingByNameMap.has(normalizedName) || (ksebId !== undefined && existingByIdMap.has(ksebId));
+      if (exists) {
         transformers += 1;
         skipped += 1;
       } else if (!newRowsMap.has(normalizedName)) {
@@ -599,7 +609,7 @@ export async function syncSectionTransformers(
     if (newRowsToInsert.length > 0) {
       const bodies = newRowsToInsert.map((row) => {
         const transformerName = normalizeTransformerName(row.transformerName);
-        const ksebTransformerId = `${officeCode}:${transformerName}`;
+        const ksebTransformerId = row.ksebTransformerId || `${officeCode}:${transformerName}`;
         return {
           kseb_transformer_id: ksebTransformerId,
           transformer_name: transformerName,
@@ -616,52 +626,64 @@ export async function syncSectionTransformers(
         };
       });
 
-      // Bulk insert new transformers
-      const saved = await supabaseRest<TransformerRow[]>("transformers?on_conflict=section_code,transformer_name", {
-        method: "POST",
-        prefer: "resolution=merge-duplicates,return=representation",
-        body: bodies,
-      });
-
-      if (saved && saved.length > 0) {
-        transformers += saved.length;
-        inserted += saved.length;
-
-        // Bulk insert initial history for new transformers
-        const historyBodies = saved.map((t) => {
-          const matchingRow = newRowsToInsert.find(
-            (r) => normalizeTransformerName(r.transformerName) === t.transformer_name
-          );
-          const snapshot = matchingRow ? snapshotFromRow(matchingRow) : {
-            availableKw: t.available_kw,
-            capacity: t.capacity,
-            allowedCap: t.allowed_cap,
-            feasible: t.feasible,
-            regi: t.regi,
-            compCap: t.comp_cap,
-          };
-          return {
-            transformer_id: t.id,
-            available_kw: snapshot.availableKw,
-            capacity: snapshot.capacity,
-            allowed_cap: snapshot.allowedCap,
-            feasible: snapshot.feasible,
-            regi: snapshot.regi,
-            comp_cap: snapshot.compCap,
-            recorded_date: todayIsoDate(),
-            recorded_at: new Date().toISOString(),
-          };
-        });
-
-        await supabaseRest("transformer_history", {
+      try {
+        // Bulk insert new transformers (on_conflict targets section_code,transformer_name to migrate existing records to new ID format)
+        const saved = await supabaseRest<TransformerRow[]>("transformers?on_conflict=section_code,transformer_name", {
           method: "POST",
-          body: historyBodies,
+          prefer: "resolution=merge-duplicates,return=representation",
+          body: bodies,
         });
+
+        if (saved && saved.length > 0) {
+          transformers += saved.length;
+          inserted += saved.length;
+
+          // Bulk insert initial history for new transformers
+          const historyBodies = saved.map((t) => {
+            const matchingRow = newRowsToInsert.find(
+              (r) => normalizeTransformerName(r.transformerName) === t.transformer_name
+            );
+            const snapshot = matchingRow ? snapshotFromRow(matchingRow) : {
+              availableKw: t.available_kw,
+              capacity: t.capacity,
+              allowedCap: t.allowed_cap,
+              feasible: t.feasible,
+              regi: t.regi,
+              compCap: t.comp_cap,
+            };
+            return {
+              transformer_id: t.id,
+              available_kw: snapshot.availableKw,
+              capacity: snapshot.capacity,
+              allowed_cap: snapshot.allowedCap,
+              feasible: snapshot.feasible,
+              regi: snapshot.regi,
+              comp_cap: snapshot.compCap,
+              recorded_date: todayIsoDate(),
+              recorded_at: new Date().toISOString(),
+            };
+          });
+
+          await supabaseRest("transformer_history", {
+            method: "POST",
+            body: historyBodies,
+          });
+        }
+      } catch (error) {
+        if (!isDuplicateKeyError(error) && !isMissingConflictConstraintError(error)) throw error;
+        // Fallback: run sequential upserts
+        for (const row of newRowsToInsert) {
+          const result = await insertTransformerIfMissing(row, officeCode, sectionName);
+          if (result.transformer) {
+            transformers += 1;
+            if (result.inserted) inserted += 1;
+            else skipped += 1;
+          }
+        }
       }
     }
   } else {
     // Refresh mode: update all and record history if changed.
-    // Deduplicate KSEB rows by normalized name to prevent duplicate updates in the same payload.
     const rowsMap = new Map<string, ResTransformerCapacity>();
     for (const row of rows) {
       const normalizedName = normalizeTransformerName(row.transformerName);
@@ -671,7 +693,7 @@ export async function syncSectionTransformers(
 
     const bodies = deduplicatedRows.map((row) => {
       const transformerName = normalizeTransformerName(row.transformerName);
-      const ksebTransformerId = `${officeCode}:${transformerName}`;
+      const ksebTransformerId = row.ksebTransformerId || `${officeCode}:${transformerName}`;
       return {
         kseb_transformer_id: ksebTransformerId,
         transformer_name: transformerName,
@@ -688,63 +710,74 @@ export async function syncSectionTransformers(
       };
     });
 
-    // Bulk upsert all transformers
-    const saved = await supabaseRest<TransformerRow[]>("transformers?on_conflict=section_code,transformer_name", {
-      method: "POST",
-      prefer: "resolution=merge-duplicates,return=representation",
-      body: bodies,
-    });
+    try {
+      // Bulk upsert all transformers
+      const saved = await supabaseRest<TransformerRow[]>("transformers?on_conflict=section_code,transformer_name", {
+        method: "POST",
+        prefer: "resolution=merge-duplicates,return=representation",
+        body: bodies,
+      });
 
-    if (saved && saved.length > 0) {
-      transformers = saved.length;
-      const historyBodies: Array<{
-        transformer_id: string;
-        available_kw: number;
-        capacity: number;
-        allowed_cap: number;
-        feasible: number;
-        regi: number;
-        comp_cap: number;
-        recorded_date: string;
-        recorded_at: string;
-      }> = [];
+      if (saved && saved.length > 0) {
+        transformers = saved.length;
+        const historyBodies: Array<{
+          transformer_id: string;
+          available_kw: number;
+          capacity: number;
+          allowed_cap: number;
+          feasible: number;
+          regi: number;
+          comp_cap: number;
+          recorded_date: string;
+          recorded_at: string;
+        }> = [];
 
-      for (const t of saved) {
-        const matchingRow = deduplicatedRows.find(
-          (r) => normalizeTransformerName(r.transformerName) === t.transformer_name
-        );
-        if (!matchingRow) continue;
+        for (const t of saved) {
+          const matchingRow = deduplicatedRows.find(
+            (r) => normalizeTransformerName(r.transformerName) === t.transformer_name
+          );
+          if (!matchingRow) continue;
 
-        const snapshot = snapshotFromRow(matchingRow);
-        const existing = existingMap.get(t.transformer_name);
-        const previousSnapshot = existing ? snapshotFromTransformerRow(existing) : null;
+          const snapshot = snapshotFromRow(matchingRow);
+          const existing = existingByNameMap.get(t.transformer_name) || existingByIdMap.get(t.kseb_transformer_id);
+          const previousSnapshot = existing ? snapshotFromTransformerRow(existing) : null;
 
-        const changed = !previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot);
-        if (changed) {
-          historyRecorded += 1;
-          historyBodies.push({
-            transformer_id: t.id,
-            available_kw: snapshot.availableKw,
-            capacity: snapshot.capacity,
-            allowed_cap: snapshot.allowedCap,
-            feasible: snapshot.feasible,
-            regi: snapshot.regi,
-            comp_cap: snapshot.compCap,
-            recorded_date: todayIsoDate(),
-            recorded_at: new Date().toISOString(),
+          const changed = !previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot);
+          if (changed) {
+            historyRecorded += 1;
+            historyBodies.push({
+              transformer_id: t.id,
+              available_kw: snapshot.availableKw,
+              capacity: snapshot.capacity,
+              allowed_cap: snapshot.allowedCap,
+              feasible: snapshot.feasible,
+              regi: snapshot.regi,
+              comp_cap: snapshot.compCap,
+              recorded_date: todayIsoDate(),
+              recorded_at: new Date().toISOString(),
+            });
+          }
+
+          if (!previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot)) {
+            updated += 1;
+          }
+        }
+
+        if (historyBodies.length > 0) {
+          await supabaseRest("transformer_history", {
+            method: "POST",
+            body: historyBodies,
           });
         }
-
-        if (!previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot)) {
-          updated += 1;
-        }
       }
-
-      if (historyBodies.length > 0) {
-        await supabaseRest("transformer_history", {
-          method: "POST",
-          body: historyBodies,
-        });
+    } catch (error) {
+      if (!isDuplicateKeyError(error) && !isMissingConflictConstraintError(error)) throw error;
+      // Fallback: run sequential upserts
+      for (const row of deduplicatedRows) {
+        const result = await refreshTransformer(row, officeCode, sectionName);
+        transformers += 1;
+        if (result.updated) updated += 1;
+        if (result.historyRecorded) historyRecorded += 1;
       }
     }
   }
@@ -757,4 +790,5 @@ export async function syncSectionTransformers(
     historyRecorded,
   };
 }
+
 

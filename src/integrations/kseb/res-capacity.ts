@@ -40,6 +40,8 @@ export interface ResDTRAvailableResponse {
 // ---------------------------------------------------------------------------
 
 export interface ResTransformerCapacity {
+  /** The real KSEB transformer id */
+  ksebTransformerId?: string;
   /** Normalised transformer name (UPPER CASE, spaces normalised) */
   transformerName: string;
   /** Feeder / substation line name */
@@ -112,6 +114,7 @@ function mapRawEntry(raw: ResRawEntry): ResTransformerCapacity {
   );
 
   return {
+    ksebTransformerId: raw.id,
     transformerName: normalizeTransformerName(raw.transformer_name),
     feederName: decodeEntities(raw.feeder_name ?? ""),
     dtrCapacity,
