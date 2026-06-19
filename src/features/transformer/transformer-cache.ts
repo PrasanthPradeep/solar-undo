@@ -84,6 +84,7 @@ function isRecoverableSupabaseCacheError(error: unknown) {
 
   return (
     error.message.includes("PGRST205") ||
+    error.message.includes("PGRST204") ||
     error.message.includes("Could not find the table") ||
     error.message.includes("Could not find a relationship") ||
     error.message.includes("permission denied") ||
@@ -359,16 +360,20 @@ export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobil
     const transformer = transformerRows[0];
     if (!transformer) return;
 
-    await recordHistoryIfChanged(transformer.id, snapshotFromRow({
-      transformerName: data.transformerName,
-      feederName: data.feederName,
-      dtrCapacity: data.dtrCapacity,
-      dtr90Capacity: data.dtr90Capacity,
-      feasibilityIssued: data.feasibilityIssued,
-      registrations: data.registrations,
-      gridConnected: data.gridConnected,
-      balanceAvailable: data.balanceAvailable,
-    }));
+    try {
+      await recordHistoryIfChanged(transformer.id, snapshotFromRow({
+        transformerName: data.transformerName,
+        feederName: data.feederName,
+        dtrCapacity: data.dtrCapacity,
+        dtr90Capacity: data.dtr90Capacity,
+        feasibilityIssued: data.feasibilityIssued,
+        registrations: data.registrations,
+        gridConnected: data.gridConnected,
+        balanceAvailable: data.balanceAvailable,
+      }));
+    } catch (historyError) {
+      console.error("Failed to record transformer history (non-fatal):", historyError);
+    }
 
     const fullMapping = {
       consumer_no: data.consumerNumber,
