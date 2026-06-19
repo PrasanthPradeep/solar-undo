@@ -1,5 +1,4 @@
 import AppLogo from "@/components/common/AppLogo";
-import CoverageStats from "@/components/common/CoverageStats";
 import FAQSection, { faqs } from "@/components/common/FAQSection";
 import Footer from "@/components/common/Footer";
 import ConsumerForm from "@/components/forms/ConsumerForm";
@@ -82,11 +81,6 @@ export default function HomePage() {
             <p className="text-sm text-muted-foreground mt-1.5 font-medium">Result</p>
           </div>
         </div>
-      </div>
-
-      {/* Coverage stats */}
-      <div className="mb-5 w-full max-w-lg">
-        <CoverageStats />
       </div>
 
       {/* Form card */}
