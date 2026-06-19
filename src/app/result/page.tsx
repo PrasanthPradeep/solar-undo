@@ -84,13 +84,13 @@ export default function ResultPage() {
           capacityChange={transformer.capacityChange}
         />
 
-        <CapacityTrendChart points={transformer.history} />
-
         {/* Transformer info */}
         <TransformerCard transformer={transformer} />
 
         {/* Consumer info */}
         <ConsumerCard consumer={consumer} />
+
+        <CapacityTrendChart points={transformer.history} />
 
         {/* Actions */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
