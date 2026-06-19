@@ -1,7 +1,7 @@
 {
   "crons": [
     {
-      "path": "/api/cron/update-transformers",
+      "path": "/api/cron/update-transformers?discover=false&limit=3&concurrency=20",
       "schedule": "0 19 * * *"
     }
   ]

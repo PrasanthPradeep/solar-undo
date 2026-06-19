@@ -7,15 +7,6 @@ import { isSupabaseConfigured } from "@/integrations/supabase/client";
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
-const KERALA_DISTRICT_COUNT = 14;
-
-function dailyDistrictId(date = new Date()) {
-  const start = Date.UTC(date.getUTCFullYear(), 0, 0);
-  const today = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
-  const dayOfYear = Math.floor((today - start) / 86_400_000);
-  return ((dayOfYear - 1) % KERALA_DISTRICT_COUNT) + 1;
-}
-
 function isAuthorized(request: Request) {
   const userAgent = request.headers.get("user-agent") ?? "";
   const authHeader = request.headers.get("authorization") ?? "";
@@ -55,14 +46,26 @@ export async function GET(request: Request) {
   const offset = Number(url.searchParams.get("offset") ?? "0");
   const section = url.searchParams.get("section");
   const districtParam = url.searchParams.get("district");
-  const districtId = districtParam ? Number(districtParam) : section ? null : dailyDistrictId();
-  const discover = url.searchParams.get("discover") !== "false";
-  const result = await syncTransformerCapacities({ limit, offset, section, districtId, discover });
+  const districtId = districtParam ? Number(districtParam) : null;
+  const discover = url.searchParams.get("discover") === "true";
+  const concurrency = url.searchParams.get("concurrency")
+    ? Number(url.searchParams.get("concurrency"))
+    : undefined;
+
+  const result = await syncTransformerCapacities({
+    limit,
+    offset,
+    section,
+    districtId,
+    discover,
+    concurrency,
+  });
 
   return NextResponse.json({
     ...result,
     source: getInvocationSource(request),
     districtId,
     discover,
+    mode: discover ? "discovery" : "refresh",
   });
 }

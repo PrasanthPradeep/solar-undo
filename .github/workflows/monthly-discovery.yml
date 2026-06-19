@@ -1,37 +1,33 @@
-name: Daily Transformer Sync
+name: Monthly Discovery
 
 on:
   schedule:
-    # 12:30 AM IST = 7:00 PM UTC on the previous day.
-    - cron: "0 19 * * *"
+    # 2:30 AM IST on the 1st of every month = 9:00 PM UTC on the previous day.
+    - cron: "0 21 1 * *"
   workflow_dispatch:
     inputs:
       start_district:
-        description: "First district id to sync, 1-14"
+        description: "First district id to scan, 1-14"
         required: false
         default: "1"
       end_district:
-        description: "Last district id to sync, 1-14"
+        description: "Last district id to scan, 1-14"
         required: false
         default: "14"
       chunk_size:
-        description: "Sections per request; keep 1 for Vercel timeout safety"
+        description: "Sections per request"
         required: false
         default: "1"
-      discover:
-        description: "Scan all sections in each district"
-        required: false
-        default: "true"
 
 concurrency:
-  group: transformer-sync
+  group: monthly-discovery
   cancel-in-progress: false
 
 jobs:
-  sync:
-    name: Sync KSEB transformer capacity
+  discover:
+    name: Discover new transformers
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 360
 
     env:
       SYNC_BASE_URL: https://solarundo.prasanthp.tech/api/cron/update-transformers
@@ -39,7 +35,6 @@ jobs:
       START_DISTRICT: ${{ github.event.inputs.start_district || '1' }}
       END_DISTRICT: ${{ github.event.inputs.end_district || '14' }}
       CHUNK_SIZE: ${{ github.event.inputs.chunk_size || '1' }}
-      DISCOVER: ${{ github.event.inputs.discover || 'true' }}
 
     steps:
       - name: Validate secret
@@ -49,19 +44,19 @@ jobs:
             exit 1
           fi
 
-      - name: Sync districts
+      - name: Discover new transformers by district
         run: |
           set -euo pipefail
 
-          echo "Syncing districts $START_DISTRICT to $END_DISTRICT"
-          echo "discover=$DISCOVER chunk_size=$CHUNK_SIZE"
+          echo "Monthly discovery: districts $START_DISTRICT to $END_DISTRICT"
+          echo "discover=true chunk_size=$CHUNK_SIZE"
 
           for district in $(seq "$START_DISTRICT" "$END_DISTRICT"); do
             echo "::group::District ${district}"
             offset=0
 
             while true; do
-              url="${SYNC_BASE_URL}?district=${district}&discover=${DISCOVER}&limit=${CHUNK_SIZE}&offset=${offset}"
+              url="${SYNC_BASE_URL}?district=${district}&discover=true&limit=${CHUNK_SIZE}&offset=${offset}"
               tmp_body="$(mktemp)"
               http_code="$(curl --silent --show-error --location \
                 --max-time 330 \

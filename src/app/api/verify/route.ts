@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 
 import {
   enrichWithHistory,
+  findTransformer,
   getCachedAvailabilityByConsumer,
+  logSearch,
   saveConsumerMapping,
 } from "@/features/transformer/transformer-cache";
 import { getSolarAvailability, SolarAvailabilityStageError } from "@/integrations/kseb/solar-availability";
@@ -55,6 +57,8 @@ export async function POST(request: Request) {
     });
     await saveConsumerMapping(data, phone);
     const enriched = await enrichWithHistory(data);
+    const transformer = await findTransformer(data.officeCode, data.transformerName);
+    await logSearch(consumerNumber, transformer?.id);
 
     // Pass through all fields including new: feederName, dtrCapacity, status
     return NextResponse.json({ success: true, data: enriched });

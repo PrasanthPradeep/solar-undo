@@ -32,7 +32,17 @@ export async function POST(request: Request) {
   const districtParam = url.searchParams.get("district");
   const districtId = districtParam ? Number(districtParam) : null;
   const discover = url.searchParams.get("discover") === "true";
-  const result = await syncTransformerCapacities({ limit, offset, section, districtId, discover });
+  const concurrency = url.searchParams.get("concurrency")
+    ? Number(url.searchParams.get("concurrency"))
+    : undefined;
+  const result = await syncTransformerCapacities({
+    limit,
+    offset,
+    section,
+    districtId,
+    discover,
+    concurrency,
+  });
 
   return NextResponse.json({ ...result, districtId, discover });
 }

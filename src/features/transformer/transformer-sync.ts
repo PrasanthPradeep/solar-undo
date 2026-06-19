@@ -1,4 +1,8 @@
-import { getKnownSectionCodes, upsertHistory, upsertTransformer } from "@/features/transformer/transformer-cache";
+import {
+  getKnownSectionCodes,
+  insertTransformerIfMissing,
+  refreshTransformer,
+} from "@/features/transformer/transformer-cache";
 import { getOfficeList, getOfficesByDistrict } from "@/integrations/kseb/office-map";
 import { fetchResCapacityByOfficeCode } from "@/integrations/kseb/res-capacity";
 
@@ -7,7 +11,7 @@ export interface TransformerSyncOptions {
   offset?: number;
   section?: string | null;
   districtId?: number | null;
-  /** discover=true: scan ALL sections in the district (slow). Default: only refresh known DB sections. */
+  /** discover=true: scan ALL sections in the district and insert missing transformers only. */
   discover?: boolean;
   concurrency?: number;
 }
@@ -20,6 +24,10 @@ export interface TransformerSyncResult {
   limit: number;
   hasMore: boolean;
   transformers: number;
+  inserted: number;
+  updated: number;
+  skipped: number;
+  historyRecorded: number;
   failures: Array<{ sectionCode: string; sectionName: string; error: string }>;
   timestamp: string;
 }
@@ -38,19 +46,18 @@ function isEmptySectionError(error: unknown): boolean {
 export async function syncTransformerCapacities(
   options: TransformerSyncOptions = {}
 ): Promise<TransformerSyncResult> {
+  const discover = options.discover ?? false;
   let selectedOffices: Array<{ officeCode: string; sectionName: string }>;
 
   if (options.section) {
-    // Single-section override
-    const all = options.districtId != null
-      ? await getOfficesByDistrict(options.districtId)
-      : await getOfficeList();
+    const all =
+      options.districtId != null
+        ? await getOfficesByDistrict(options.districtId)
+        : await getOfficeList();
     selectedOffices = all.filter((o) => o.officeCode === options.section);
-  } else if (options.districtId != null && options.discover) {
-    // Full district discovery scan (slow — use sparingly)
+  } else if (options.districtId != null && discover) {
     selectedOffices = await getOfficesByDistrict(options.districtId);
   } else if (options.districtId != null) {
-    // Refresh only known sections in this district
     const [districtOffices, knownCodes] = await Promise.all([
       getOfficesByDistrict(options.districtId),
       getKnownSectionCodes(),
@@ -58,7 +65,6 @@ export async function syncTransformerCapacities(
     const knownSet = new Set(knownCodes);
     selectedOffices = districtOffices.filter((o) => knownSet.has(o.officeCode));
   } else {
-    // No district specified — refresh all known sections across all districts
     const knownCodes = await getKnownSectionCodes();
     const all = await getOfficeList();
     const knownSet = new Set(knownCodes);
@@ -71,8 +77,13 @@ export async function syncTransformerCapacities(
   selectedOffices =
     limit > 0 ? selectedOffices.slice(offset, offset + limit) : selectedOffices.slice(offset);
 
-  const concurrency = Math.min(Math.max(options.concurrency ?? 8, 1), 16);
+  const defaultConcurrency = discover ? 8 : 20;
+  const concurrency = Math.min(Math.max(options.concurrency ?? defaultConcurrency, 1), 20);
   let transformers = 0;
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+  let historyRecorded = 0;
   const failures: TransformerSyncResult["failures"] = [];
 
   let cursor = 0;
@@ -85,15 +96,23 @@ export async function syncTransformerCapacities(
       try {
         const rows = await fetchResCapacityByOfficeCode(office.officeCode);
         for (const row of rows) {
-          const saved = await upsertTransformer(row, office.officeCode, office.sectionName);
-          const transformer = saved[0];
-          if (transformer) {
-            await upsertHistory(transformer.id, row.balanceAvailable);
+          if (discover) {
+            const result = await insertTransformerIfMissing(row, office.officeCode, office.sectionName);
+            if (!result.transformer) continue;
             transformers += 1;
+            if (result.inserted) {
+              inserted += 1;
+            } else {
+              skipped += 1;
+            }
+          } else {
+            const result = await refreshTransformer(row, office.officeCode, office.sectionName);
+            transformers += 1;
+            if (result.updated) updated += 1;
+            if (result.historyRecorded) historyRecorded += 1;
           }
         }
       } catch (error) {
-        // Sections with no transformers are expected — don't count as failures
         if (isEmptySectionError(error)) continue;
         failures.push({
           sectionCode: office.officeCode,
@@ -118,6 +137,10 @@ export async function syncTransformerCapacities(
     limit,
     hasMore: offset + selectedOffices.length < totalSections,
     transformers,
+    inserted,
+    updated,
+    skipped,
+    historyRecorded,
     failures,
     timestamp: new Date().toISOString(),
   };

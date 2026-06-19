@@ -1,7 +1,8 @@
 import { calculateSolarEligibility } from "@/features/solar/solar-calculator";
 import { SolarAvailabilityResponse } from "@/integrations/kseb/solar-availability";
 import { normalizeTransformerName, ResTransformerCapacity } from "@/integrations/kseb/res-capacity";
-import { supabaseRest, SupabaseUnavailableError } from "@/integrations/supabase/client";
+import { getOfficeList } from "@/integrations/kseb/office-map";
+import { supabaseCount, supabaseRest, SupabaseUnavailableError } from "@/integrations/supabase/client";
 
 /** Returns the distinct section_codes of all transformers already cached in the DB. */
 export async function getKnownSectionCodes(): Promise<string[]> {
@@ -23,6 +24,21 @@ export interface CapacityChange {
   currentKw: number;
 }
 
+export interface CoverageStats {
+  districtsIndexed: number;
+  sectionsIndexed: number;
+  transformersIndexed: number;
+}
+
+export interface HistorySnapshot {
+  availableKw: number;
+  capacity: number;
+  allowedCap: number;
+  feasible: number;
+  regi: number;
+  compCap: number;
+}
+
 interface TransformerRow {
   id: string;
   transformer_name: string;
@@ -34,6 +50,7 @@ interface TransformerRow {
   feasible: number;
   regi: number;
   comp_cap: number;
+  available_kw: number;
   last_updated: string;
 }
 
@@ -43,6 +60,7 @@ interface ConsumerTransformerRow {
   transformer_id: string | null;
   section_code: string;
   updated_at: string;
+  last_seen?: string;
   consumer_name?: string | null;
   section_name?: string | null;
   tariff?: string | null;
@@ -104,11 +122,72 @@ function toAvailability(row: TransformerRow) {
   };
 }
 
+function snapshotFromRow(row: ResTransformerCapacity): HistorySnapshot {
+  return {
+    availableKw: row.balanceAvailable,
+    capacity: row.dtrCapacity,
+    allowedCap: row.dtr90Capacity,
+    feasible: row.feasibilityIssued,
+    regi: row.registrations,
+    compCap: row.gridConnected,
+  };
+}
+
+function snapshotFromTransformerRow(row: TransformerRow): HistorySnapshot {
+  const availableKw = Math.max(0, row.allowed_cap - row.feasible - row.regi - row.comp_cap);
+  return {
+    availableKw,
+    capacity: row.capacity,
+    allowedCap: row.allowed_cap,
+    feasible: row.feasible,
+    regi: row.regi,
+    compCap: row.comp_cap,
+  };
+}
+
+function snapshotsEqual(a: HistorySnapshot, b: HistorySnapshot) {
+  return (
+    a.availableKw === b.availableKw &&
+    a.capacity === b.capacity &&
+    a.allowedCap === b.allowedCap &&
+    a.feasible === b.feasible &&
+    a.regi === b.regi &&
+    a.compCap === b.compCap
+  );
+}
+
 async function getHistory(transformerId: string): Promise<HistoryRow[]> {
   return supabaseRest<HistoryRow[]>(
     `transformer_history?transformer_id=eq.${encodeURIComponent(transformerId)}` +
       "&select=available_kw,recorded_at&order=recorded_at.desc&limit=7"
   );
+}
+
+async function getLatestHistorySnapshot(transformerId: string): Promise<HistorySnapshot | null> {
+  const rows = await supabaseRest<
+    Array<{
+      available_kw: number;
+      capacity: number;
+      allowed_cap: number;
+      feasible: number;
+      regi: number;
+      comp_cap: number;
+    }>
+  >(
+    `transformer_history?transformer_id=eq.${encodeURIComponent(transformerId)}` +
+      "&select=available_kw,capacity,allowed_cap,feasible,regi,comp_cap&order=recorded_at.desc&limit=1"
+  );
+  const row = rows[0];
+  if (!row) return null;
+
+  return {
+    availableKw: row.available_kw,
+    capacity: row.capacity,
+    allowedCap: row.allowed_cap,
+    feasible: row.feasible,
+    regi: row.regi,
+    compCap: row.comp_cap,
+  };
 }
 
 function buildAnalytics(history: HistoryRow[], currentKw: number) {
@@ -133,6 +212,70 @@ function buildAnalytics(history: HistoryRow[], currentKw: number) {
   return { trend, change };
 }
 
+export async function getCoverageStats(): Promise<CoverageStats | null> {
+  try {
+    const [sectionCodes, transformerCount] = await Promise.all([
+      getKnownSectionCodes(),
+      supabaseCount("transformers?select=id"),
+    ]);
+
+    let districtsIndexed = 1;
+    try {
+      const offices = await getOfficeList();
+      const sectionToDistrict = new Map(offices.map((office) => [office.officeCode, office.districtId]));
+      const districtIds = new Set(
+        sectionCodes.map((code) => sectionToDistrict.get(code)).filter((id): id is number => id != null)
+      );
+      districtsIndexed = districtIds.size || 1;
+    } catch {
+      districtsIndexed = 1;
+    }
+
+    return {
+      districtsIndexed,
+      sectionsIndexed: sectionCodes.length,
+      transformersIndexed: transformerCount,
+    };
+  } catch (error) {
+    if (error instanceof SupabaseUnavailableError || isRecoverableSupabaseCacheError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
+export async function logSearch(consumerNo: string, transformerId?: string | null) {
+  try {
+    await supabaseRest("search_logs", {
+      method: "POST",
+      body: [
+        {
+          consumer_no: consumerNo,
+          transformer_id: transformerId ?? null,
+          searched_at: new Date().toISOString(),
+        },
+      ],
+    });
+  } catch (error) {
+    if (error instanceof SupabaseUnavailableError || isRecoverableSupabaseCacheError(error)) return;
+    console.error("Failed to log search", error);
+  }
+}
+
+export async function updateLastSeen(consumerNo: string) {
+  try {
+    await supabaseRest(`consumer_transformers?consumer_no=eq.${encodeURIComponent(consumerNo)}`, {
+      method: "PATCH",
+      body: {
+        last_seen: new Date().toISOString(),
+      },
+    });
+  } catch (error) {
+    if (error instanceof SupabaseUnavailableError || isRecoverableSupabaseCacheError(error)) return;
+    console.error("Failed to update last_seen", error);
+  }
+}
+
 export async function getCachedAvailabilityByConsumer(consumerNo: string) {
   try {
     const rows = await supabaseRest<ConsumerTransformerRow[]>(
@@ -146,6 +289,9 @@ export async function getCachedAvailabilityByConsumer(consumerNo: string) {
     const availability = toAvailability(transformer);
     const history = await getHistory(transformer.id);
     const analytics = buildAnalytics(history, availability.balanceAvailable);
+
+    await logSearch(consumerNo, transformer.id);
+    await updateLastSeen(consumerNo);
 
     return {
       ...availability,
@@ -195,7 +341,25 @@ export async function enrichWithHistory(data: SolarAvailabilityResponse) {
 
 export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobile?: string) {
   try {
-    const transformerRows = await upsertTransformer({
+    const transformerRows = await upsertTransformer(
+      {
+        transformerName: data.transformerName,
+        feederName: data.feederName,
+        dtrCapacity: data.dtrCapacity,
+        dtr90Capacity: data.dtr90Capacity,
+        feasibilityIssued: data.feasibilityIssued,
+        registrations: data.registrations,
+        gridConnected: data.gridConnected,
+        balanceAvailable: data.balanceAvailable,
+      },
+      data.officeCode,
+      data.sectionName
+    );
+
+    const transformer = transformerRows[0];
+    if (!transformer) return;
+
+    await recordHistoryIfChanged(transformer.id, snapshotFromRow({
       transformerName: data.transformerName,
       feederName: data.feederName,
       dtrCapacity: data.dtrCapacity,
@@ -204,12 +368,8 @@ export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobil
       registrations: data.registrations,
       gridConnected: data.gridConnected,
       balanceAvailable: data.balanceAvailable,
-    }, data.officeCode, data.sectionName);
+    }));
 
-    const transformer = transformerRows[0];
-    if (!transformer) return;
-
-    await upsertHistory(transformer.id, data.balanceAvailable);
     const fullMapping = {
       consumer_no: data.consumerNumber,
       transformer_name: data.transformerName,
@@ -222,6 +382,7 @@ export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobil
       mobile: mobile ?? null,
       office_phone: data.office_phone,
       updated_at: new Date().toISOString(),
+      last_seen: new Date().toISOString(),
     };
 
     try {
@@ -253,6 +414,36 @@ export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobil
   }
 }
 
+export async function findTransformer(sectionCode: string, transformerName: string) {
+  const normalized = normalizeTransformerName(transformerName);
+  const rows = await supabaseRest<TransformerRow[]>(
+    `transformers?section_code=eq.${encodeURIComponent(sectionCode)}` +
+      `&transformer_name=eq.${encodeURIComponent(normalized)}` +
+      "&select=*&limit=1"
+  );
+  return rows[0] ?? null;
+}
+
+export async function insertTransformerIfMissing(
+  row: ResTransformerCapacity,
+  sectionCode: string,
+  sectionName: string
+) {
+  const existing = await findTransformer(sectionCode, row.transformerName);
+  if (existing) {
+    return { inserted: false, transformer: existing };
+  }
+
+  const saved = await upsertTransformer(row, sectionCode, sectionName);
+  const transformer = saved[0];
+  if (!transformer) {
+    return { inserted: false, transformer: null };
+  }
+
+  await recordHistoryIfChanged(transformer.id, snapshotFromRow(row));
+  return { inserted: true, transformer };
+}
+
 export async function upsertTransformer(
   row: ResTransformerCapacity,
   sectionCode: string,
@@ -271,6 +462,7 @@ export async function upsertTransformer(
     feasible: row.feasibilityIssued,
     regi: row.registrations,
     comp_cap: row.gridConnected,
+    available_kw: row.balanceAvailable,
     last_updated: new Date().toISOString(),
   };
 
@@ -283,8 +475,6 @@ export async function upsertTransformer(
   } catch (error) {
     if (!isMissingConflictConstraintError(error) && !isDuplicateKeyError(error)) throw error;
 
-    // Fallback: composite unique constraint missing or transformer_name-only constraint fired.
-    // Find the existing row by (section_code, transformer_name) and PATCH it.
     const existing = await supabaseRest<TransformerRow[]>(
       `transformers?section_code=eq.${encodeURIComponent(sectionCode)}` +
         `&transformer_name=eq.${encodeURIComponent(transformerName)}` +
@@ -307,41 +497,62 @@ export async function upsertTransformer(
   }
 }
 
-export async function upsertHistory(transformerId: string, availableKw: number) {
-  const recordedDate = todayIsoDate();
+export async function recordHistoryIfChanged(transformerId: string, snapshot: HistorySnapshot) {
+  const latest = await getLatestHistorySnapshot(transformerId);
+  if (latest && snapshotsEqual(latest, snapshot)) {
+    return false;
+  }
+
   const body = {
     transformer_id: transformerId,
-    available_kw: availableKw,
-    recorded_date: recordedDate,
+    available_kw: snapshot.availableKw,
+    capacity: snapshot.capacity,
+    allowed_cap: snapshot.allowedCap,
+    feasible: snapshot.feasible,
+    regi: snapshot.regi,
+    comp_cap: snapshot.compCap,
+    recorded_date: todayIsoDate(),
     recorded_at: new Date().toISOString(),
   };
 
-  try {
-    await supabaseRest("transformer_history?on_conflict=transformer_id,recorded_date", {
-      method: "POST",
-      prefer: "resolution=merge-duplicates",
-      body: [body],
-    });
-  } catch (error) {
-    if (!isMissingConflictConstraintError(error)) throw error;
+  await supabaseRest("transformer_history", {
+    method: "POST",
+    body: [body],
+  });
+  return true;
+}
 
-    const existing = await supabaseRest<Array<{ id: string }>>(
-      `transformer_history?transformer_id=eq.${encodeURIComponent(transformerId)}` +
-        `&recorded_date=eq.${encodeURIComponent(recordedDate)}` +
-        "&select=id&limit=1"
-    );
+/** @deprecated Use recordHistoryIfChanged instead. */
+export async function upsertHistory(transformerId: string, availableKw: number) {
+  await recordHistoryIfChanged(transformerId, {
+    availableKw,
+    capacity: 0,
+    allowedCap: 0,
+    feasible: 0,
+    regi: 0,
+    compCap: 0,
+  });
+}
 
-    if (existing[0]) {
-      await supabaseRest(`transformer_history?id=eq.${existing[0].id}`, {
-        method: "PATCH",
-        body,
-      });
-      return;
-    }
+export async function refreshTransformer(
+  row: ResTransformerCapacity,
+  sectionCode: string,
+  sectionName: string
+) {
+  const existing = await findTransformer(sectionCode, row.transformerName);
+  const saved = await upsertTransformer(row, sectionCode, sectionName);
+  const transformer = saved[0];
+  if (!transformer) return { updated: false, historyRecorded: false };
 
-    await supabaseRest("transformer_history", {
-      method: "POST",
-      body: [body],
-    });
-  }
+  const snapshot = snapshotFromRow(row);
+  const previousSnapshot = existing ? snapshotFromTransformerRow(existing) : null;
+  const historyRecorded = await recordHistoryIfChanged(
+    transformer.id,
+    snapshot
+  );
+
+  return {
+    updated: !previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot),
+    historyRecorded,
+  };
 }

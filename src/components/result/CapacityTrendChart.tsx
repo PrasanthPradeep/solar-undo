@@ -25,7 +25,7 @@ export default function CapacityTrendChart({ points = [] }: CapacityTrendChartPr
   return (
     <div className="glass-card rounded-2xl p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-foreground">7-Day Capacity Trend</h2>
+        <h2 className="text-base font-semibold text-foreground">Past 7 Days</h2>
         <p className="text-xs text-muted-foreground tabular-nums">
           {min} - {max} kW
         </p>

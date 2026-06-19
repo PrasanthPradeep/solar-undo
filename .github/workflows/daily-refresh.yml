@@ -1,0 +1,76 @@
+name: Daily Refresh
+
+on:
+  schedule:
+    # 12:30 AM IST = 7:00 PM UTC on the previous day.
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+    inputs:
+      chunk_size:
+        description: "Sections per request; keep low for Vercel timeout safety"
+        required: false
+        default: "3"
+      concurrency:
+        description: "Concurrent KSEB section requests (max 20)"
+        required: false
+        default: "20"
+
+concurrency:
+  group: daily-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    name: Refresh known transformer capacities
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    env:
+      SYNC_BASE_URL: https://solarundo.prasanthp.tech/api/cron/update-transformers
+      CRON_SECRET: ${{ secrets.SOLAR_UNDO_CRON_SECRET }}
+      CHUNK_SIZE: ${{ github.event.inputs.chunk_size || '3' }}
+      CONCURRENCY: ${{ github.event.inputs.concurrency || '20' }}
+
+    steps:
+      - name: Validate secret
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Missing GitHub secret: SOLAR_UNDO_CRON_SECRET"
+            exit 1
+          fi
+
+      - name: Refresh all known sections
+        run: |
+          set -euo pipefail
+
+          echo "Daily refresh: discover=false concurrency=$CONCURRENCY chunk_size=$CHUNK_SIZE"
+          offset=0
+
+          while true; do
+            url="${SYNC_BASE_URL}?discover=false&limit=${CHUNK_SIZE}&offset=${offset}&concurrency=${CONCURRENCY}"
+            tmp_body="$(mktemp)"
+            http_code="$(curl --silent --show-error --location \
+              --max-time 330 \
+              --output "$tmp_body" \
+              --write-out "%{http_code}" \
+              --header "Authorization: Bearer ${CRON_SECRET}" \
+              "$url")"
+
+            cat "$tmp_body"
+            echo
+
+            if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+              echo "Refresh offset ${offset} failed with HTTP ${http_code}"
+              exit 1
+            fi
+
+            has_more="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(r.hasMore ? 'true' : 'false')" "$tmp_body")"
+            sections="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(r.sections || 0)" "$tmp_body")"
+
+            if [ "$sections" = "0" ] || [ "$has_more" != "true" ]; then
+              break
+            fi
+
+            offset=$((offset + CHUNK_SIZE))
+            sleep 5
+          done

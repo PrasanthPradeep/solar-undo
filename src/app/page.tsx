@@ -1,4 +1,5 @@
 import AppLogo from "@/components/common/AppLogo";
+import CoverageStats from "@/components/common/CoverageStats";
 import FAQSection, { faqs } from "@/components/common/FAQSection";
 import Footer from "@/components/common/Footer";
 import ConsumerForm from "@/components/forms/ConsumerForm";
@@ -83,6 +84,11 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Coverage stats */}
+      <div className="mb-5 w-full max-w-lg">
+        <CoverageStats />
+      </div>
+
       {/* Form card */}
       <div className="glass-card w-full max-w-lg rounded-2xl p-7">
         <h2 className="text-lg font-semibold mb-5 text-foreground">
@@ -93,7 +99,7 @@ export default function HomePage() {
 
       {/* Footer note */}
       <p className="mt-3 text-xs text-muted-foreground text-center max-w-xs">
-        Your data is sent directly to KSEB servers and is never stored by this service.
+        Consumer numbers are verified once via KSEB, then served from the capacity cache.
       </p>
 
       <div className="mt-4 w-full">
