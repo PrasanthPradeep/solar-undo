@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ☀️ Solar ഉണ്ടോ? (Solar Undo?)
 
-## Getting Started
+![Solar Undo Banner](./public/og-image.png)
 
-First, run the development server:
+**Instantly check rooftop solar capacity availability for your KSEB connection — transformer-level accuracy.**
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Solar ഉണ്ടോ? is a fast, responsive, and modern web application built for residents of Kerala to easily verify if their local KSEB (Kerala State Electricity Board) transformer has available capacity for new rooftop solar installations. 
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Features
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Transformer-Level Accuracy**: Checks real-time capacity of your specific KSEB transformer.
+- **Simple 3-Step Verification**: Enter consumer number, verify details, and get the result instantly.
+- **Direct Integration**: Fetches data securely and directly from KSEB servers.
+- **Privacy-First**: No personal data or consumer numbers are stored on our servers.
+- **Mobile-First Design**: Beautiful, responsive interface designed to work flawlessly on mobile devices.
+- **Dark Mode Support**: Sleek, modern aesthetic with automatic dark/light theme adaptation.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🛠️ Technology Stack
 
-## Learn More
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+- **Library**: [React 19](https://react.dev/)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **UI Components**: [shadcn/ui](https://ui.shadcn.com/) + [Radix UI](https://www.radix-ui.com/)
+- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/)
+- **Database / Backend Integration**: [Supabase](https://supabase.com/)
+- **PDF Processing**: `pdf-parse` for automated data extraction workflows.
 
-To learn more about Next.js, take a look at the following resources:
+## 🚀 Getting Started
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Prerequisites
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- Node.js 20+
+- npm, yarn, pnpm, or bun
 
-## Deploy on Vercel
+### Installation
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/yourusername/solar-undo.git
+   cd solar-undo
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. **Install dependencies:**
+   ```bash
+   npm install
+   # or yarn install / pnpm install
+   ```
+
+3. **Set up environment variables:**
+   Create a `.env.local` file in the root directory and add necessary keys (e.g., Supabase URLs).
+   ```bash
+   cp .env.example .env.local
+   ```
+
+4. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+
+5. **Open the app:**
+   Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [CONTRIBUTING.md](./CONTRIBUTING.md) for details on how to get started.
+
+## 🏛️ Architecture
+
+For a deep dive into how the app connects to KSEB and manages state, check out the [ARCHITECTURE.md](./ARCHITECTURE.md) guide.
+
+## 📄 License
+
+This project is open-source. See the LICENSE file for details.
