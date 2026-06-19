@@ -17,7 +17,7 @@ on:
       chunk_size:
         description: "Sections per request"
         required: false
-        default: "1"
+        default: "2"
 
 concurrency:
   group: monthly-discovery
@@ -25,16 +25,22 @@ concurrency:
 
 jobs:
   discover:
-    name: Discover new transformers
+    name: District ${{ matrix.district }}
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        district: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
     env:
       SYNC_BASE_URL: https://solarundo.prasanthp.tech/api/cron/update-transformers
       CRON_SECRET: ${{ secrets.SOLAR_UNDO_CRON_SECRET }}
       START_DISTRICT: ${{ github.event.inputs.start_district || '1' }}
       END_DISTRICT: ${{ github.event.inputs.end_district || '14' }}
-      CHUNK_SIZE: ${{ github.event.inputs.chunk_size || '1' }}
+      CHUNK_SIZE: ${{ github.event.inputs.chunk_size || '2' }}
+      DISTRICT: ${{ matrix.district }}
 
     steps:
       - name: Validate secret
@@ -48,45 +54,42 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Monthly discovery: districts $START_DISTRICT to $END_DISTRICT"
+          # Skip if this matrix district is outside the requested range
+          if [ "$DISTRICT" -lt "$START_DISTRICT" ] || [ "$DISTRICT" -gt "$END_DISTRICT" ]; then
+            echo "Skipping district $DISTRICT (out of requested range $START_DISTRICT to $END_DISTRICT)"
+            exit 0
+          fi
+
+          echo "Monthly discovery: District $DISTRICT"
           echo "discover=true chunk_size=$CHUNK_SIZE"
 
-          for district in $(seq "$START_DISTRICT" "$END_DISTRICT"); do
-            echo "::group::District ${district}"
-            offset=0
+          offset=0
 
-            while true; do
-              url="${SYNC_BASE_URL}?district=${district}&discover=true&limit=${CHUNK_SIZE}&offset=${offset}"
-              tmp_body="$(mktemp)"
-              http_code="$(curl --silent --show-error --location \
-                --max-time 330 \
-                --output "$tmp_body" \
-                --write-out "%{http_code}" \
-                --header "Authorization: Bearer ${CRON_SECRET}" \
-                "$url")"
+          while true; do
+            url="${SYNC_BASE_URL}?district=${DISTRICT}&discover=true&limit=${CHUNK_SIZE}&offset=${offset}"
+            tmp_body="$(mktemp)"
+            http_code="$(curl --silent --show-error --location \
+              --max-time 330 \
+              --output "$tmp_body" \
+              --write-out "%{http_code}" \
+              --header "Authorization: Bearer ${CRON_SECRET}" \
+              "$url")"
 
-              cat "$tmp_body"
-              echo
+            cat "$tmp_body"
+            echo
 
-              if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
-                echo "District ${district} offset ${offset} failed with HTTP ${http_code}"
-                exit 1
-              fi
-
-              has_more="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(r.hasMore ? 'true' : 'false')" "$tmp_body")"
-              sections="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(r.sections || 0)" "$tmp_body")"
-
-              if [ "$sections" = "0" ] || [ "$has_more" != "true" ]; then
-                break
-              fi
-
-              offset=$((offset + CHUNK_SIZE))
-              sleep 5
-            done
-
-            echo "::endgroup::"
-
-            if [ "$district" != "$END_DISTRICT" ]; then
-              sleep 60
+            if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+              echo "District ${DISTRICT} offset ${offset} failed with HTTP ${http_code}"
+              exit 1
             fi
+
+            has_more="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(r.hasMore ? 'true' : 'false')" "$tmp_body")"
+            sections="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(r.sections || 0)" "$tmp_body")"
+
+            if [ "$sections" = "0" ] || [ "$has_more" != "true" ]; then
+              break
+            fi
+
+            offset=$((offset + CHUNK_SIZE))
+            sleep 2
           done

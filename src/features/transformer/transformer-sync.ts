@@ -1,7 +1,6 @@
 import {
   getKnownSectionCodes,
-  insertTransformerIfMissing,
-  refreshTransformer,
+  syncSectionTransformers,
 } from "@/features/transformer/transformer-cache";
 import { getOfficeList, getOfficesByDistrict } from "@/integrations/kseb/office-map";
 import { fetchResCapacityByOfficeCode } from "@/integrations/kseb/res-capacity";
@@ -95,23 +94,17 @@ export async function syncTransformerCapacities(
 
       try {
         const rows = await fetchResCapacityByOfficeCode(office.officeCode);
-        for (const row of rows) {
-          if (discover) {
-            const result = await insertTransformerIfMissing(row, office.officeCode, office.sectionName);
-            if (!result.transformer) continue;
-            transformers += 1;
-            if (result.inserted) {
-              inserted += 1;
-            } else {
-              skipped += 1;
-            }
-          } else {
-            const result = await refreshTransformer(row, office.officeCode, office.sectionName);
-            transformers += 1;
-            if (result.updated) updated += 1;
-            if (result.historyRecorded) historyRecorded += 1;
-          }
-        }
+        const result = await syncSectionTransformers(
+          office.officeCode,
+          office.sectionName,
+          rows,
+          discover
+        );
+        transformers += result.transformers;
+        inserted += result.inserted;
+        updated += result.updated;
+        skipped += result.skipped;
+        historyRecorded += result.historyRecorded;
       } catch (error) {
         if (isEmptySectionError(error)) continue;
         failures.push({

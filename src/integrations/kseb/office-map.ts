@@ -108,22 +108,18 @@ export async function getOfficeList(): Promise<KsebOffice[]> {
 // Public: get sections for a single district (no full-list cache needed)
 // ---------------------------------------------------------------------------
 export async function getOfficesByDistrict(districtId: number): Promise<KsebOffice[]> {
-  try {
-    const res = await ksebPostForm(
-      "/selfservices/getinputSection",
-      { distictid: String(districtId) },
-      {
-        headers: {
-          "X-Requested-With": "XMLHttpRequest",
-          Referer: "https://wss.kseb.in/selfservices/reCap",
-        },
-      }
-    );
-    const json = (await res.json()) as Record<string, number>;
-    return parseSectionResponse(json, districtId);
-  } catch {
-    return [];
-  }
+  const res = await ksebPostForm(
+    "/selfservices/getinputSection",
+    { distictid: String(districtId) },
+    {
+      headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        Referer: "https://wss.kseb.in/selfservices/reCap",
+      },
+    }
+  );
+  const json = (await res.json()) as Record<string, number>;
+  return parseSectionResponse(json, districtId);
 }
 
 // ---------------------------------------------------------------------------
