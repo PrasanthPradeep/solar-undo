@@ -115,7 +115,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
                   WebkitTextFillColor: "transparent",
                 }}
               >
-                SOLAR UNDO
+                SOLAR ഉണ്ടോ?
               </span>
             </div>
             <div
@@ -267,17 +267,17 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
             >
               {lastUpdated
                 ? new Date(lastUpdated).toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
                 : new Date().toLocaleDateString("en-IN", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
+                  day: "numeric",
+                  month: "short",
+                  year: "numeric",
+                })}
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
