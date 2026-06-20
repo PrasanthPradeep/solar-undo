@@ -12,7 +12,6 @@ export default function DownloadButton() {
   const cardRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isDark, setIsDark] = useState(false);
 
   if (!consumer || !transformer) return null;
 
@@ -20,12 +19,6 @@ export default function DownloadButton() {
     if (!cardRef.current) return;
     setLoading(true);
     setError(null);
-
-    const activeDark = document.documentElement.classList.contains("dark");
-    setIsDark(activeDark);
-
-    // Allow a tick for the ExportCard component to re-render with the correct theme
-    await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
       await downloadExportCard(cardRef.current, "solar-undo-result.png");
@@ -94,7 +87,6 @@ export default function DownloadButton() {
           lastUpdated={transformer.asOn}
           status={transformer.status}
           dtrCapacity={transformer.dtrCapacity}
-          isDark={isDark}
         />
       </div>
     </>
