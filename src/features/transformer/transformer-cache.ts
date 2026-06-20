@@ -3,6 +3,7 @@ import { SolarAvailabilityResponse } from "@/integrations/kseb/solar-availabilit
 import { normalizeTransformerName, ResTransformerCapacity } from "@/integrations/kseb/res-capacity";
 import { getOfficeList } from "@/integrations/kseb/office-map";
 import { supabaseCount, supabaseRest, SupabaseUnavailableError } from "@/integrations/supabase/client";
+import { validateKsebId } from "@/utils/validators";
 
 /** Returns the distinct section_codes of all transformers already cached in the DB. */
 export async function getKnownSectionCodes(): Promise<string[]> {
@@ -456,7 +457,22 @@ export async function upsertTransformer(
   sectionName: string
 ) {
   const transformerName = normalizeTransformerName(row.transformerName);
-  const ksebTransformerId = row.ksebTransformerId || `${sectionCode}:${transformerName}`;
+  const existing = await findTransformer(sectionCode, transformerName);
+
+  let ksebTransformerId = row.ksebTransformerId ? String(row.ksebTransformerId).trim() : "";
+
+  // Preserve existing numeric ID if KSEB temporarily omits it
+  if (
+    existing?.kseb_transformer_id &&
+    /^\d+$/.test(existing.kseb_transformer_id) &&
+    !ksebTransformerId
+  ) {
+    console.warn(`Preserving existing KSEB ID for ${transformerName}`);
+    ksebTransformerId = existing.kseb_transformer_id;
+  }
+
+  ksebTransformerId = validateKsebId(ksebTransformerId);
+
   const body = {
     kseb_transformer_id: ksebTransformerId,
     transformer_name: transformerName,
@@ -609,7 +625,7 @@ export async function syncSectionTransformers(
     if (newRowsToInsert.length > 0) {
       const bodies = newRowsToInsert.map((row) => {
         const transformerName = normalizeTransformerName(row.transformerName);
-        const ksebTransformerId = row.ksebTransformerId || `${officeCode}:${transformerName}`;
+        const ksebTransformerId = validateKsebId(row.ksebTransformerId ?? "");
         return {
           kseb_transformer_id: ksebTransformerId,
           transformer_name: transformerName,
@@ -693,7 +709,21 @@ export async function syncSectionTransformers(
 
     const bodies = deduplicatedRows.map((row) => {
       const transformerName = normalizeTransformerName(row.transformerName);
-      const ksebTransformerId = row.ksebTransformerId || `${officeCode}:${transformerName}`;
+      const existing = existingByNameMap.get(transformerName) || (row.ksebTransformerId ? existingByIdMap.get(row.ksebTransformerId) : undefined);
+      
+      let ksebTransformerId = row.ksebTransformerId ? String(row.ksebTransformerId).trim() : "";
+
+      if (
+        existing?.kseb_transformer_id &&
+        /^\d+$/.test(existing.kseb_transformer_id) &&
+        !ksebTransformerId
+      ) {
+        console.warn(`Preserving existing KSEB ID for ${transformerName}`);
+        ksebTransformerId = existing.kseb_transformer_id;
+      }
+
+      ksebTransformerId = validateKsebId(ksebTransformerId);
+
       return {
         kseb_transformer_id: ksebTransformerId,
         transformer_name: transformerName,

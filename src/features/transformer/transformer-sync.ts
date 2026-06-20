@@ -4,6 +4,7 @@ import {
 } from "@/features/transformer/transformer-cache";
 import { getOfficeList, getOfficesByDistrict } from "@/integrations/kseb/office-map";
 import { fetchResCapacityByOfficeCode } from "@/integrations/kseb/res-capacity";
+import { supabaseCount } from "@/integrations/supabase/client";
 
 export interface TransformerSyncOptions {
   limit?: number;
@@ -121,6 +122,13 @@ export async function syncTransformerCapacities(
       syncNextOffice()
     )
   );
+
+  if (discover) {
+    const invalidCount = await supabaseCount("transformers?kseb_transformer_id=imatch.[^0-9]");
+    if (invalidCount > 0) {
+      throw new Error("Invalid transformer IDs detected");
+    }
+  }
 
   return {
     success: failures.length === 0,

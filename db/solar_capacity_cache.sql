@@ -137,6 +137,18 @@ begin
       add constraint transformers_section_code_transformer_name_key
       unique (section_code, transformer_name);
   end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'chk_numeric_kseb_transformer_id'
+  ) then
+    update public.transformers
+    set kseb_transformer_id = '456638'
+    where kseb_transformer_id = '4566:PUTHEN NADA';
+
+    alter table public.transformers
+      add constraint chk_numeric_kseb_transformer_id
+      check (kseb_transformer_id ~ '^[0-9]+$');
+  end if;
 end $$;
 
 -- History rows are inserted only when capacity values change (not one per day).
