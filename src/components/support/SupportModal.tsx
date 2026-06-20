@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Copy, Check, ExternalLink, Heart, RotateCw } from "lucide-react";
+import { X, Copy, Check, ExternalLink, Heart } from "lucide-react";
 import { SUPPORT_CONFIG } from "@/config/support";
 import { generateUpiUrl } from "@/lib/generate-upi-url";
 import { trackEvent } from "@/lib/analytics";
@@ -13,62 +13,14 @@ interface SupportModalProps {
   onClose: () => void;
 }
 
-interface Stats {
-  transformersIndexed: number;
-  sectionsIndexed: number;
-  districtsIndexed: number;
-}
-
 export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [stats, setStats] = useState<Stats>({
-    transformersIndexed: 96790,
-    sectionsIndexed: 774,
-    districtsIndexed: 14,
-  });
 
-  const handleRefreshStats = async () => {
-    if (refreshing) return;
-    setRefreshing(true);
-    try {
-      const res = await fetch("/api/coverage-stats?bypass=true");
-      const data = await res.json();
-      if (data && data.available) {
-        setStats({
-          transformersIndexed: data.transformersIndexed || 96790,
-          sectionsIndexed: data.sectionsIndexed || 774,
-          districtsIndexed: data.districtsIndexed || 14,
-        });
-      }
-    } catch (err) {
-      console.error("Failed to refresh coverage stats:", err);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
-  // Fetch live stats when the modal opens
   useEffect(() => {
-    if (!isOpen) return;
-
-    trackEvent("support_modal_opened");
-
-    fetch("/api/coverage-stats")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data && data.available) {
-          setStats({
-            transformersIndexed: data.transformersIndexed || 96790,
-            sectionsIndexed: data.sectionsIndexed || 774,
-            districtsIndexed: data.districtsIndexed || 14,
-          });
-        }
-      })
-      .catch((err) => {
-        console.error("Failed to load live coverage stats:", err);
-      });
+    if (isOpen) {
+      trackEvent("support_modal_opened");
+    }
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -103,7 +55,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
       />
 
       {/* Modal Card */}
-      <div className="relative w-full max-w-[420px] max-h-[90vh] overflow-y-auto bg-card border border-border rounded-3xl shadow-2xl p-5 sm:p-6 transition-all duration-300 scale-100 z-10 flex flex-col gap-5">
+      <div className="relative w-full max-w-[390px] max-h-[90vh] overflow-y-auto bg-card border border-border rounded-3xl shadow-2xl p-5 sm:p-6 transition-all duration-300 scale-100 z-10 flex flex-col gap-5">
         {/* Close Button */}
         <button
           onClick={onClose}
@@ -122,44 +74,9 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           <p className="text-sm text-muted-foreground max-w-[320px] mx-auto leading-relaxed">
             Help keep Solar Undo free and updated for everyone.
           </p>
-        </div>
-
-        {/* Database Stats */}
-        <div className="relative group/stats">
-          <div className="grid grid-cols-3 gap-2 bg-muted/50 border border-border/60 rounded-2xl p-3 text-center">
-            <div>
-              <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
-                {stats.transformersIndexed.toLocaleString("en-IN")}
-              </div>
-              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
-                Transformers
-              </div>
-            </div>
-            <div className="border-x border-border/80">
-              <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
-                {stats.sectionsIndexed.toLocaleString("en-IN")}
-              </div>
-              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
-                Sections
-              </div>
-            </div>
-            <div>
-              <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
-                {stats.districtsIndexed.toLocaleString("en-IN")}
-              </div>
-              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
-                Districts
-              </div>
-            </div>
+          <div className="inline-block text-[11px] font-semibold text-muted-foreground bg-muted/40 border border-border/50 rounded-xl py-1.5 px-3 mt-1 tracking-wide">
+            96,790 Transformers &bull; 774 Sections &bull; 14 Districts
           </div>
-          <button
-            onClick={handleRefreshStats}
-            disabled={refreshing}
-            className="absolute -top-2.5 -right-1.5 p-1.5 bg-card border border-border hover:border-primary/50 text-muted-foreground hover:text-primary rounded-full shadow-sm transition-all duration-200 cursor-pointer disabled:opacity-60 z-10"
-            title="Refresh statistics"
-          >
-            <RotateCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
-          </button>
         </div>
 
         {/* QR Code and message */}

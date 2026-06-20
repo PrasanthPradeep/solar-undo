@@ -22,7 +22,7 @@ export async function GET(request: Request) {
 
   // Serve from in-memory cache if valid and not bypassed
   if (cachedStats && !bypass && (now - lastFetched < CACHE_TTL)) {
-    return NextResponse.json({ ...cachedStats, available: true });
+    return NextResponse.json({ ...cachedStats, lastFetched, available: true });
   }
 
   // Fetch fresh stats from the DB
@@ -32,8 +32,8 @@ export async function GET(request: Request) {
     // If DB is unavailable, return cached stats as fallback, or defaults
     return NextResponse.json(
       cachedStats
-        ? { ...cachedStats, available: true }
-        : { districtsIndexed: 14, sectionsIndexed: 774, transformersIndexed: 96790, available: false }
+        ? { ...cachedStats, lastFetched, available: true }
+        : { districtsIndexed: 14, sectionsIndexed: 774, transformersIndexed: 96790, lastFetched: now, available: false }
     );
   }
 
@@ -43,6 +43,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     ...stats,
+    lastFetched,
     available: true,
   });
 }
