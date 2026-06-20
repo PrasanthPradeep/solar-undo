@@ -10,6 +10,7 @@ import ConsumerCard from "@/components/result/ConsumerCard";
 import TransformerCard from "@/components/result/TransformerCard";
 import CapacityCard from "@/components/result/CapacityCard";
 import CapacityTrendChart from "@/components/result/CapacityTrendChart";
+import DownloadButton from "@/components/result/DownloadButton";
 import { formatAsOn } from "@/utils/formatters";
 import { trackEvent } from "@/lib/analytics";
 
@@ -93,28 +94,33 @@ export default function ResultPage() {
         <CapacityTrendChart points={transformer.history} />
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-3 pt-2">
-          <button
-            id="check-another-btn"
-            onClick={() => {
-              useEligibilityStore.getState().reset();
-              router.push("/");
-            }}
-            className="flex-1 btn-solar rounded-xl py-3.5 text-sm font-semibold"
-          >
-            ☀️ Check Another Consumer
-          </button>
+        <div className="flex flex-col gap-3 pt-2">
+          <DownloadButton />
 
-          <a
-            href="https://wss.kseb.in/selfservices/reCap"
-            target="_blank"
-            rel="noopener noreferrer"
-            id="res-portal-link"
-            className="flex-1 rounded-xl border py-3.5 text-sm font-medium text-center transition-colors hover:bg-muted"
-            style={{ borderColor: "var(--border)" }}
-          >
-            View Full RES Data ↗
-          </a>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              id="check-another-btn"
+              onClick={() => {
+                useEligibilityStore.getState().reset();
+                router.push("/");
+              }}
+              className="flex-1 rounded-xl border py-3.5 text-sm font-semibold transition-colors hover:bg-muted"
+              style={{ borderColor: "var(--border)" }}
+            >
+              ☀️ Check Another Consumer
+            </button>
+
+            <a
+              href="https://wss.kseb.in/selfservices/reCap"
+              target="_blank"
+              rel="noopener noreferrer"
+              id="res-portal-link"
+              className="flex-1 rounded-xl border py-3.5 text-sm font-medium text-center transition-colors hover:bg-muted"
+              style={{ borderColor: "var(--border)" }}
+            >
+              View Full RES Data ↗
+            </a>
+          </div>
         </div>
 
         <p className="text-xs text-center text-muted-foreground pb-4">
