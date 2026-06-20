@@ -46,7 +46,7 @@ export default function HomePage() {
         <AppLogo size="md" className="mb-4" />
 
         <h1 className="text-4xl font-extrabold tracking-tight mb-2">
-          Solar Slot{" "}
+          Solar{" "}
           <span style={{ color: "var(--primary)" }}>ഉണ്ടോ?</span>
         </h1>
 
