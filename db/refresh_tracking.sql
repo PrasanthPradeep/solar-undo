@@ -77,14 +77,17 @@ alter table public.refresh_changes enable row level security;
 alter table public.district_refresh_progress enable row level security;
 
 -- Setup standard RLS policies
+drop policy if exists "Allow public read access to refresh_runs" on public.refresh_runs;
 create policy "Allow public read access to refresh_runs"
   on public.refresh_runs for select
   using (true);
 
+drop policy if exists "Allow public read access to district_refresh_progress" on public.district_refresh_progress;
 create policy "Allow public read access to district_refresh_progress"
   on public.district_refresh_progress for select
   using (true);
 
+drop policy if exists "Allow public read access to refresh_changes" on public.refresh_changes;
 create policy "Allow public read access to refresh_changes"
   on public.refresh_changes for select
   using (true);
