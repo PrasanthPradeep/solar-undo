@@ -5,7 +5,7 @@ create table if not exists public.refresh_runs (
   completed_at timestamptz,
 
   status text not null default 'RUNNING' check (status in ('PENDING', 'RUNNING', 'COMPLETED', 'FAILED', 'TIMEOUT')),
-  run_type text not null default 'REFRESH',
+  run_type text not null default 'REFRESH' check (run_type in ('REFRESH', 'DISCOVERY')),
   triggered_by text not null default 'api',
   failure_reason text,
 
@@ -104,6 +104,9 @@ create index if not exists idx_refresh_changes_run on public.refresh_changes(run
 create index if not exists idx_refresh_changes_transformer on public.refresh_changes(transformer_id);
 create index if not exists idx_refresh_changes_changed_at on public.refresh_changes(changed_at desc);
 
+create index if not exists idx_refresh_changes_district on public.refresh_changes(district_id);
+create index if not exists idx_refresh_changes_section on public.refresh_changes(section_code);
+
 -- Stored procedure to atomically update progress
 create or replace function public.increment_refresh_progress(
   p_run_id uuid,
@@ -116,7 +119,7 @@ create or replace function public.increment_refresh_progress(
   p_offset integer
 ) returns void as $$
 begin
-  -- 1. Update the main refresh run
+  -- 1. Update the main refresh run (Counters only, no completion or status change!)
   update public.refresh_runs
   set 
     processed_sections = processed_sections + 1,
@@ -125,18 +128,10 @@ begin
     updated_count = updated_count + p_updated,
     skipped_count = skipped_count + p_skipped,
     failures_count = failures_count + p_failures,
-    current_offset = p_offset,
-    status = case 
-      when processed_sections + 1 >= total_sections then 'COMPLETED'
-      else status
-    end,
-    completed_at = case 
-      when processed_sections + 1 >= total_sections then now()
-      else completed_at
-    end
+    current_offset = p_offset
   where id = p_run_id;
 
-  -- 2. Update the district progress
+  -- 2. Update the district progress (District completing is valid here)
   update public.district_refresh_progress
   set
     processed_sections = processed_sections + 1,
@@ -205,6 +200,20 @@ select
 from public.refresh_runs r
 left join public.refresh_changes c
   on c.run_id = r.id
-group by r.id;
+group by 
+  r.id,
+  r.started_at,
+  r.completed_at,
+  r.status,
+  r.run_type,
+  r.triggered_by,
+  r.failure_reason,
+  r.total_sections,
+  r.processed_sections,
+  r.total_transformers,
+  r.inserted_count,
+  r.updated_count,
+  r.skipped_count,
+  r.failures_count;
 
 grant select on public.latest_refresh_summary to service_role;
