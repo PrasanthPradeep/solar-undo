@@ -10,6 +10,7 @@ interface ExportCardProps {
   lastUpdated?: string;
   status?: SolarStatus;
   dtrCapacity?: number;
+  isDark?: boolean;
 }
 
 export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
@@ -23,6 +24,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
       lastUpdated,
       status,
       dtrCapacity,
+      isDark = false,
     },
     ref
   ) => {
@@ -35,26 +37,47 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
     const derivedStatus: SolarStatus =
       status ?? (availableKw > 10 ? "AVAILABLE" : availableKw > 0 ? "LIMITED" : "FULL");
 
-    const statusConfig = {
-      AVAILABLE: {
-        label: "Capacity Available",
-        color: "#047857", // Emerald-700
-        bg: "rgba(16, 185, 129, 0.08)",
-        glow: "0 4px 20px rgba(16, 185, 129, 0.12)",
-      },
-      LIMITED: {
-        label: "Limited Capacity",
-        color: "#b45309", // Amber-700
-        bg: "rgba(245, 158, 11, 0.08)",
-        glow: "0 4px 20px rgba(245, 158, 11, 0.12)",
-      },
-      FULL: {
-        label: "Capacity Full",
-        color: "#b91c1c", // Red-700
-        bg: "rgba(239, 68, 68, 0.08)",
-        glow: "0 4px 20px rgba(239, 68, 68, 0.12)",
-      },
-    }[derivedStatus];
+    const statusConfig = isDark
+      ? {
+          AVAILABLE: {
+            label: "Capacity Available",
+            color: "#10b981", // Emerald
+            bg: "rgba(16, 185, 129, 0.15)",
+            glow: "0 0 40px rgba(16, 185, 129, 0.3)",
+          },
+          LIMITED: {
+            label: "Limited Capacity",
+            color: "#f59e0b", // Amber
+            bg: "rgba(245, 158, 11, 0.15)",
+            glow: "0 0 40px rgba(245, 158, 11, 0.3)",
+          },
+          FULL: {
+            label: "Capacity Full",
+            color: "#ef4444", // Red/rose
+            bg: "rgba(239, 68, 68, 0.15)",
+            glow: "0 0 40px rgba(239, 68, 68, 0.3)",
+          },
+        }[derivedStatus]
+      : {
+          AVAILABLE: {
+            label: "Capacity Available",
+            color: "#047857", // Emerald-700
+            bg: "rgba(16, 185, 129, 0.08)",
+            glow: "0 4px 20px rgba(16, 185, 129, 0.12)",
+          },
+          LIMITED: {
+            label: "Limited Capacity",
+            color: "#b45309", // Amber-700
+            bg: "rgba(245, 158, 11, 0.08)",
+            glow: "0 4px 20px rgba(245, 158, 11, 0.12)",
+          },
+          FULL: {
+            label: "Capacity Full",
+            color: "#b91c1c", // Red-700
+            bg: "rgba(239, 68, 68, 0.08)",
+            glow: "0 4px 20px rgba(239, 68, 68, 0.12)",
+          },
+        }[derivedStatus];
 
     return (
       <div
@@ -62,12 +85,17 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
         style={{
           width: "1080px",
           height: "1350px",
-          backgroundColor: "#f8fafc",
-          backgroundImage: `
-            radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.07) 0%, transparent 60%),
-            radial-gradient(circle at 20% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 60%)
-          `,
-          color: "#0f172a",
+          backgroundColor: isDark ? "#080a10" : "#f8fafc",
+          backgroundImage: isDark
+            ? `
+              radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.12) 0%, transparent 50%),
+              radial-gradient(circle at 20% 80%, rgba(16, 185, 129, 0.06) 0%, transparent 50%)
+            `
+            : `
+              radial-gradient(circle at 80% 20%, rgba(245, 158, 11, 0.07) 0%, transparent 60%),
+              radial-gradient(circle at 20% 80%, rgba(16, 185, 129, 0.04) 0%, transparent 60%)
+            `,
+          color: isDark ? "#f3f4f6" : "#0f172a",
           fontFamily: "'Inter', sans-serif",
           display: "flex",
           flexDirection: "column",
@@ -76,7 +104,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
           boxSizing: "border-box",
           position: "relative",
           overflow: "hidden",
-          border: "1px solid #e2e8f0",
+          border: isDark ? "1px solid rgba(255, 255, 255, 0.05)" : "1px solid #e2e8f0",
         }}
       >
         {/* Subtle grid pattern background */}
@@ -87,8 +115,10 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
             left: 0,
             right: 0,
             bottom: 0,
-            opacity: 0.04,
-            backgroundImage: "radial-gradient(#0f172a 1px, transparent 1px)",
+            opacity: isDark ? 0.05 : 0.04,
+            backgroundImage: isDark
+              ? "radial-gradient(#ffffff 1px, transparent 1px)"
+              : "radial-gradient(#0f172a 1px, transparent 1px)",
             backgroundSize: "24px 24px",
             pointerEvents: "none",
           }}
@@ -122,7 +152,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
               style={{
                 fontSize: "14px",
                 fontWeight: 600,
-                color: "#475569",
+                color: isDark ? "#9ca3af" : "#475569",
                 letterSpacing: "3px",
                 textTransform: "uppercase",
                 marginTop: "8px",
@@ -151,19 +181,22 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
         {/* Center Panel — Big Result */}
         <div
           style={{
-            background: "#ffffff",
-            border: "1.5px solid #e2e8f0",
+            background: isDark ? "rgba(255, 255, 255, 0.03)" : "#ffffff",
+            backdropFilter: isDark ? "blur(20px)" : "none",
+            border: isDark ? "1.5px solid rgba(255, 255, 255, 0.07)" : "1.5px solid #e2e8f0",
             borderRadius: "32px",
             padding: "60px",
             textAlign: "center",
-            boxShadow: "0 20px 40px -15px rgba(15, 23, 42, 0.08)",
+            boxShadow: isDark
+              ? "0 20px 50px rgba(0,0,0,0.3)"
+              : "0 20px 40px -15px rgba(15, 23, 42, 0.08)",
           }}
         >
           <div
             style={{
               fontSize: "18px",
               fontWeight: 600,
-              color: "#64748b",
+              color: isDark ? "#9ca3af" : "#64748b",
               letterSpacing: "2px",
               textTransform: "uppercase",
               marginBottom: "16px",
@@ -175,10 +208,11 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
             style={{
               fontSize: "100px",
               fontWeight: 900,
-              color: "#0f172a",
+              color: isDark ? "#ffffff" : "#0f172a",
               letterSpacing: "-2px",
               lineHeight: 1,
               marginBottom: "12px",
+              textShadow: isDark ? "0 10px 30px rgba(0,0,0,0.5)" : "none",
             }}
           >
             {availableKw.toFixed(2)}{" "}
@@ -186,7 +220,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
               kW
             </span>
           </div>
-          <div style={{ fontSize: "16px", color: "#64748b" }}>
+          <div style={{ fontSize: "16px", color: isDark ? "#6b7280" : "#64748b" }}>
             Based on maximum hosting limit (81% of DTR Rating)
             {dtrCapacity ? ` — DTR Capacity: ${dtrCapacity} kVA` : ""}
           </div>
@@ -203,22 +237,22 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
             <div
               key={item.label}
               style={{
-                background: "#ffffff",
-                border: "1.5px solid #e2e8f0",
+                background: isDark ? "rgba(255, 255, 255, 0.02)" : "#ffffff",
+                border: isDark ? "1.5px solid rgba(255, 255, 255, 0.04)" : "1.5px solid #e2e8f0",
                 borderRadius: "20px",
                 padding: "24px",
                 display: "flex",
                 flexDirection: "column",
                 justifyContent: "space-between",
                 height: "120px",
-                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.02)",
+                boxShadow: isDark ? "none" : "0 4px 6px -1px rgba(0, 0, 0, 0.02)",
               }}
             >
               <div
                 style={{
                   fontSize: "14px",
                   fontWeight: 600,
-                  color: "#64748b",
+                  color: isDark ? "#6b7280" : "#64748b",
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
@@ -231,7 +265,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
                 style={{
                   fontSize: "20px",
                   fontWeight: 700,
-                  color: "#1e293b",
+                  color: isDark ? "#ffffff" : "#1e293b",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
                   whiteSpace: "nowrap",
@@ -246,7 +280,7 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
         {/* Footer */}
         <div
           style={{
-            borderTop: "1.5px solid #e2e8f0",
+            borderTop: isDark ? "1.5px solid rgba(255, 255, 255, 0.08)" : "1.5px solid #e2e8f0",
             paddingTop: "40px",
             display: "flex",
             justifyContent: "space-between",
@@ -254,8 +288,17 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
           }}
         >
           <div>
-            <div style={{ fontSize: "14px", color: "#64748b" }}>Report Generated On</div>
-            <div style={{ fontSize: "18px", fontWeight: 600, color: "#334155", marginTop: "4px" }}>
+            <div style={{ fontSize: "14px", color: isDark ? "#6b7280" : "#64748b" }}>
+              Report Generated On
+            </div>
+            <div
+              style={{
+                fontSize: "18px",
+                fontWeight: 600,
+                color: isDark ? "#e5e7eb" : "#334155",
+                marginTop: "4px",
+              }}
+            >
               {lastUpdated
                 ? new Date(lastUpdated).toLocaleDateString("en-IN", {
                     day: "numeric",
@@ -272,12 +315,14 @@ export const ExportCard = forwardRef<HTMLDivElement, ExportCardProps>(
             </div>
           </div>
           <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "14px", color: "#64748b" }}>Verify online at</div>
+            <div style={{ fontSize: "14px", color: isDark ? "#6b7280" : "#64748b" }}>
+              Verify online at
+            </div>
             <div
               style={{
                 fontSize: "20px",
                 fontWeight: 800,
-                color: "#b45309",
+                color: isDark ? "#f59e0b" : "#b45309",
                 marginTop: "4px",
                 letterSpacing: "-0.5px",
               }}
