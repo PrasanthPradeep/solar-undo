@@ -35,6 +35,8 @@ export async function POST(request: Request) {
   const concurrency = url.searchParams.get("concurrency")
     ? Number(url.searchParams.get("concurrency"))
     : undefined;
+  const runId = url.searchParams.get("runId");
+
   const result = await syncTransformerCapacities({
     limit,
     offset,
@@ -42,7 +44,8 @@ export async function POST(request: Request) {
     districtId,
     discover,
     concurrency,
+    runId,
   });
 
-  return NextResponse.json({ ...result, districtId, discover });
+  return NextResponse.json({ ...result, districtId, discover, runId });
 }

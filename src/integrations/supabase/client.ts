@@ -1,6 +1,6 @@
 import { env } from "@/config/env";
 
-type SupabaseMethod = "GET" | "POST" | "PATCH";
+type SupabaseMethod = "GET" | "POST" | "PATCH" | "DELETE";
 
 export class SupabaseUnavailableError extends Error {
   constructor() {

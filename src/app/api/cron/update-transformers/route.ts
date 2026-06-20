@@ -51,6 +51,7 @@ export async function GET(request: Request) {
   const concurrency = url.searchParams.get("concurrency")
     ? Number(url.searchParams.get("concurrency"))
     : undefined;
+  const runId = url.searchParams.get("runId");
 
   const result = await syncTransformerCapacities({
     limit,
@@ -59,6 +60,7 @@ export async function GET(request: Request) {
     districtId,
     discover,
     concurrency,
+    runId,
   });
 
   return NextResponse.json({
@@ -66,6 +68,7 @@ export async function GET(request: Request) {
     source: getInvocationSource(request),
     districtId,
     discover,
+    runId,
     mode: discover ? "discovery" : "refresh",
   });
 }

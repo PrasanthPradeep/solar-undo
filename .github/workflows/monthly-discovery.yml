@@ -24,8 +24,52 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  setup-run:
+    name: Initialize monthly discovery run
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.init.outputs.run_id }}
+    steps:
+      - name: Create run in DB
+        id: init
+        run: |
+          set -euo pipefail
+          
+          if [ -z "${{ secrets.SOLAR_UNDO_CRON_SECRET }}" ]; then
+            echo "Missing GitHub secret: SOLAR_UNDO_CRON_SECRET"
+            exit 1
+          fi
+          
+          # Initialize run using POST request to /start endpoint with discover=true
+          tmp_body="$(mktemp)"
+          http_code="$(curl --silent --show-error --location \
+            --request POST \
+            --max-time 60 \
+            --output "$tmp_body" \
+            --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${{ secrets.SOLAR_UNDO_CRON_SECRET }}" \
+            "https://solarundo.prasanthp.tech/api/cron/update-transformers/start?discover=true&triggeredBy=github-actions")"
+            
+          cat "$tmp_body"
+          echo
+          
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Failed to start discovery run with HTTP ${http_code}"
+            exit 1
+          fi
+          
+          run_id="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(r.runId || '')" "$tmp_body")"
+          if [ -z "$run_id" ]; then
+            echo "Run ID was not returned by start endpoint."
+            exit 1
+          fi
+          
+          echo "Created run: $run_id"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
   discover:
     name: District ${{ matrix.district }}
+    needs: setup-run
     runs-on: ubuntu-latest
     timeout-minutes: 120
     strategy:
@@ -41,6 +85,7 @@ jobs:
       END_DISTRICT: ${{ github.event.inputs.end_district || '14' }}
       CHUNK_SIZE: ${{ github.event.inputs.chunk_size || '2' }}
       DISTRICT: ${{ matrix.district }}
+      RUN_ID: ${{ needs.setup-run.outputs.run_id }}
 
     steps:
       - name: Validate secret
@@ -60,13 +105,11 @@ jobs:
             exit 0
           fi
 
-          echo "Monthly discovery: District $DISTRICT"
-          echo "discover=true chunk_size=$CHUNK_SIZE"
-
+          echo "Monthly discovery: District $DISTRICT discover=true chunk_size=$CHUNK_SIZE run_id=$RUN_ID"
           offset=0
 
           while true; do
-            url="${SYNC_BASE_URL}?district=${DISTRICT}&discover=true&limit=${CHUNK_SIZE}&offset=${offset}"
+            url="${SYNC_BASE_URL}?district=${DISTRICT}&discover=true&limit=${CHUNK_SIZE}&offset=${offset}&runId=${RUN_ID}"
             tmp_body="$(mktemp)"
             http_code="$(curl --silent --show-error --location \
               --max-time 330 \
@@ -93,3 +136,56 @@ jobs:
             offset=$((offset + CHUNK_SIZE))
             sleep 2
           done
+
+  finalize-run:
+    name: Finalize Discovery Run
+    needs: [setup-run, discover]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine status and update DB
+        run: |
+          set -euo pipefail
+          
+          RUN_ID="${{ needs.setup-run.outputs.run_id }}"
+          if [ -z "$RUN_ID" ]; then
+            echo "No Run ID generated. Skipping completion logic."
+            exit 0
+          fi
+          
+          DISCOVER_OUTCOME="${{ needs.discover.result }}"
+          echo "Discover job outcome: $DISCOVER_OUTCOME"
+          
+          STATUS="COMPLETED"
+          REASON=""
+          if [ "$DISCOVER_OUTCOME" = "cancelled" ]; then
+            STATUS="FAILED"
+            REASON="GitHub action cancelled"
+          elif [ "$DISCOVER_OUTCOME" = "failure" ]; then
+            STATUS="FAILED"
+            REASON="GitHub action failed"
+          elif [ "$DISCOVER_OUTCOME" = "skipped" ]; then
+            STATUS="FAILED"
+            REASON="GitHub action skipped"
+          fi
+          
+          ENCODED_REASON="$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$REASON")"
+          
+          echo "Finalizing Run $RUN_ID with status: $STATUS, reason: $REASON"
+          
+          tmp_body="$(mktemp)"
+          http_code="$(curl --silent --show-error --location \
+            --request POST \
+            --max-time 60 \
+            --output "$tmp_body" \
+            --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${{ secrets.SOLAR_UNDO_CRON_SECRET }}" \
+            "https://solarundo.prasanthp.tech/api/cron/update-transformers/end?runId=${RUN_ID}&status=${STATUS}&failureReason=${ENCODED_REASON}")"
+            
+          cat "$tmp_body"
+          echo
+          
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Failed to finalize run with HTTP ${http_code}"
+            exit 1
+          fi

@@ -28,6 +28,23 @@ const KERALA_DISTRICT_IDS: Record<string, number> = {
   KASARGODE: 14,
 };
 
+export const DISTRICT_ID_TO_NAME: Record<number, string> = {
+  1: "Thiruvananthapuram",
+  2: "Kollam",
+  3: "Pathanamthitta",
+  4: "Alappuzha",
+  5: "Kottayam",
+  6: "Idukki",
+  7: "Ernakulam",
+  8: "Thrissur",
+  9: "Palakkad",
+  10: "Malappuram",
+  11: "Kozhikode",
+  12: "Wayanad",
+  13: "Kannur",
+  14: "Kasaragod",
+};
+
 // ---------------------------------------------------------------------------
 // Module-level cache — populated on first lookup
 // ---------------------------------------------------------------------------

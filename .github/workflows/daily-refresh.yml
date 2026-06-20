@@ -20,16 +20,67 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  setup-run:
+    name: Initialize daily refresh run
+    runs-on: ubuntu-latest
+    outputs:
+      run_id: ${{ steps.init.outputs.run_id }}
+    steps:
+      - name: Create run in DB
+        id: init
+        run: |
+          set -euo pipefail
+          
+          if [ -z "${{ secrets.SOLAR_UNDO_CRON_SECRET }}" ]; then
+            echo "Missing GitHub secret: SOLAR_UNDO_CRON_SECRET"
+            exit 1
+          fi
+          
+          # Initialize run using POST request to /start endpoint
+          tmp_body="$(mktemp)"
+          http_code="$(curl --silent --show-error --location \
+            --request POST \
+            --max-time 60 \
+            --output "$tmp_body" \
+            --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${{ secrets.SOLAR_UNDO_CRON_SECRET }}" \
+            "https://solarundo.prasanthp.tech/api/cron/update-transformers/start?discover=false&triggeredBy=github-actions")"
+            
+          cat "$tmp_body"
+          echo
+          
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Failed to start refresh run with HTTP ${http_code}"
+            exit 1
+          fi
+          
+          run_id="$(node -e "const fs=require('fs'); const r=JSON.parse(fs.readFileSync(process.argv[1], 'utf8')); console.log(r.runId || '')" "$tmp_body")"
+          if [ -z "$run_id" ]; then
+            echo "Run ID was not returned by start endpoint."
+            exit 1
+          fi
+          
+          echo "Created run: $run_id"
+          echo "run_id=$run_id" >> "$GITHUB_OUTPUT"
+
   refresh:
-    name: Refresh known transformer capacities
+    name: District ${{ matrix.district }}
+    needs: setup-run
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        district: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
 
     env:
       SYNC_BASE_URL: https://solarundo.prasanthp.tech/api/cron/update-transformers
       CRON_SECRET: ${{ secrets.SOLAR_UNDO_CRON_SECRET }}
       CHUNK_SIZE: ${{ github.event.inputs.chunk_size || '3' }}
       CONCURRENCY: ${{ github.event.inputs.concurrency || '20' }}
+      DISTRICT: ${{ matrix.district }}
+      RUN_ID: ${{ needs.setup-run.outputs.run_id }}
 
     steps:
       - name: Validate secret
@@ -39,15 +90,15 @@ jobs:
             exit 1
           fi
 
-      - name: Refresh all known sections
+      - name: Refresh district sections
         run: |
           set -euo pipefail
 
-          echo "Daily refresh: discover=false concurrency=$CONCURRENCY chunk_size=$CHUNK_SIZE"
+          echo "Daily refresh: District $DISTRICT discover=false concurrency=$CONCURRENCY chunk_size=$CHUNK_SIZE run_id=$RUN_ID"
           offset=0
 
           while true; do
-            url="${SYNC_BASE_URL}?discover=false&limit=${CHUNK_SIZE}&offset=${offset}&concurrency=${CONCURRENCY}"
+            url="${SYNC_BASE_URL}?district=${DISTRICT}&discover=false&limit=${CHUNK_SIZE}&offset=${offset}&concurrency=${CONCURRENCY}&runId=${RUN_ID}"
             tmp_body="$(mktemp)"
             http_code="$(curl --silent --show-error --location \
               --max-time 330 \
@@ -60,7 +111,7 @@ jobs:
             echo
 
             if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
-              echo "Refresh offset ${offset} failed with HTTP ${http_code}"
+              echo "District ${DISTRICT} offset ${offset} failed with HTTP ${http_code}"
               exit 1
             fi
 
@@ -74,3 +125,56 @@ jobs:
             offset=$((offset + CHUNK_SIZE))
             sleep 5
           done
+
+  finalize-run:
+    name: Finalize Refresh Run
+    needs: [setup-run, refresh]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Determine status and update DB
+        run: |
+          set -euo pipefail
+          
+          RUN_ID="${{ needs.setup-run.outputs.run_id }}"
+          if [ -z "$RUN_ID" ]; then
+            echo "No Run ID generated. Skipping completion logic."
+            exit 0
+          fi
+          
+          REFRESH_OUTCOME="${{ needs.refresh.result }}"
+          echo "Refresh job outcome: $REFRESH_OUTCOME"
+          
+          STATUS="COMPLETED"
+          REASON=""
+          if [ "$REFRESH_OUTCOME" = "cancelled" ]; then
+            STATUS="FAILED"
+            REASON="GitHub action cancelled"
+          elif [ "$REFRESH_OUTCOME" = "failure" ]; then
+            STATUS="FAILED"
+            REASON="GitHub action failed"
+          elif [ "$REFRESH_OUTCOME" = "skipped" ]; then
+            STATUS="FAILED"
+            REASON="GitHub action skipped"
+          fi
+          
+          ENCODED_REASON="$(node -e "console.log(encodeURIComponent(process.argv[1]))" "$REASON")"
+          
+          echo "Finalizing Run $RUN_ID with status: $STATUS, reason: $REASON"
+          
+          tmp_body="$(mktemp)"
+          http_code="$(curl --silent --show-error --location \
+            --request POST \
+            --max-time 60 \
+            --output "$tmp_body" \
+            --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${{ secrets.SOLAR_UNDO_CRON_SECRET }}" \
+            "https://solarundo.prasanthp.tech/api/cron/update-transformers/end?runId=${RUN_ID}&status=${STATUS}&failureReason=${ENCODED_REASON}")"
+            
+          cat "$tmp_body"
+          echo
+          
+          if [ "$http_code" -lt 200 ] || [ "$http_code" -ge 300 ]; then
+            echo "Failed to finalize run with HTTP ${http_code}"
+            exit 1
+          fi

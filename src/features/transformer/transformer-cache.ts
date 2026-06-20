@@ -1,7 +1,7 @@
 import { calculateSolarEligibility } from "@/features/solar/solar-calculator";
 import { SolarAvailabilityResponse } from "@/integrations/kseb/solar-availability";
 import { normalizeTransformerName, ResTransformerCapacity } from "@/integrations/kseb/res-capacity";
-import { getOfficeList } from "@/integrations/kseb/office-map";
+import { getOfficeList, DISTRICT_ID_TO_NAME } from "@/integrations/kseb/office-map";
 import { supabaseCount, supabaseRest, SupabaseUnavailableError } from "@/integrations/supabase/client";
 import { validateKsebId } from "@/utils/validators";
 
@@ -589,7 +589,9 @@ export async function upsertHistory(transformerId: string, availableKw: number) 
 export async function refreshTransformer(
   row: ResTransformerCapacity,
   sectionCode: string,
-  sectionName: string
+  sectionName: string,
+  runId?: string | null,
+  districtId?: number | null
 ) {
   const existing = await findTransformer(sectionCode, row.transformerName);
   const saved = await upsertTransformer(row, sectionCode, sectionName);
@@ -603,8 +605,53 @@ export async function refreshTransformer(
     snapshot
   );
 
+  const changed = !previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot);
+
+  if (previousSnapshot && changed && runId) {
+    const changesList = [];
+    const fieldsToCompare: Array<{ key: keyof HistorySnapshot; label: string }> = [
+      { key: "availableKw", label: "available_capacity" },
+      { key: "capacity", label: "capacity" },
+      { key: "allowedCap", label: "allowed_cap" },
+      { key: "feasible", label: "feasible" },
+      { key: "regi", label: "regi" },
+      { key: "compCap", label: "comp_cap" },
+    ];
+
+    for (const field of fieldsToCompare) {
+      const oldValue = previousSnapshot[field.key];
+      const newValue = snapshot[field.key];
+      if (oldValue !== newValue) {
+        changesList.push({
+          run_id: runId,
+          district_id: districtId || null,
+          section_code: sectionCode,
+          transformer_id: transformer.kseb_transformer_id,
+          transformer_uuid: transformer.id,
+          field_name: field.label,
+          old_value: String(oldValue),
+          new_value: String(newValue),
+          section_name: sectionName,
+          district_name: districtId ? (DISTRICT_ID_TO_NAME[districtId] || null) : null,
+          transformer_name: transformer.transformer_name,
+        });
+      }
+    }
+
+    if (changesList.length > 0) {
+      try {
+        await supabaseRest("refresh_changes", {
+          method: "POST",
+          body: changesList,
+        });
+      } catch (err) {
+        console.error("Failed to insert refresh changes in sequential mode", err);
+      }
+    }
+  }
+
   return {
-    updated: !previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot),
+    updated: changed,
     historyRecorded,
   };
 }
@@ -613,7 +660,9 @@ export async function syncSectionTransformers(
   officeCode: string,
   sectionName: string,
   rows: ResTransformerCapacity[],
-  discover: boolean
+  discover: boolean,
+  runId?: string | null,
+  districtId?: number | null
 ) {
   // 1. Fetch all existing cached transformers for this section
   const existingTransformers = await supabaseRest<TransformerRow[]>(
@@ -814,6 +863,50 @@ export async function syncSectionTransformers(
 
           if (!previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot)) {
             updated += 1;
+
+            // Track exactly what changed in refresh_changes
+            if (previousSnapshot && runId) {
+              const changesList = [];
+              const fieldsToCompare: Array<{ key: keyof HistorySnapshot; label: string }> = [
+                { key: "availableKw", label: "available_capacity" },
+                { key: "capacity", label: "capacity" },
+                { key: "allowedCap", label: "allowed_cap" },
+                { key: "feasible", label: "feasible" },
+                { key: "regi", label: "regi" },
+                { key: "compCap", label: "comp_cap" },
+              ];
+
+              for (const field of fieldsToCompare) {
+                const oldValue = previousSnapshot[field.key];
+                const newValue = snapshot[field.key];
+                if (oldValue !== newValue) {
+                  changesList.push({
+                    run_id: runId,
+                    district_id: districtId || null,
+                    section_code: officeCode,
+                    transformer_id: t.kseb_transformer_id,
+                    transformer_uuid: t.id,
+                    field_name: field.label,
+                    old_value: String(oldValue),
+                    new_value: String(newValue),
+                    section_name: sectionName,
+                    district_name: districtId ? (DISTRICT_ID_TO_NAME[districtId] || null) : null,
+                    transformer_name: t.transformer_name,
+                  });
+                }
+              }
+
+              if (changesList.length > 0) {
+                try {
+                  await supabaseRest("refresh_changes", {
+                    method: "POST",
+                    body: changesList,
+                  });
+                } catch (err) {
+                  console.error("Failed to log refresh changes in bulk loop", err);
+                }
+              }
+            }
           }
         }
 
@@ -828,7 +921,7 @@ export async function syncSectionTransformers(
       if (!isDuplicateKeyError(error) && !isMissingConflictConstraintError(error)) throw error;
       // Fallback: run sequential upserts
       for (const row of deduplicatedRows) {
-        const result = await refreshTransformer(row, officeCode, sectionName);
+        const result = await refreshTransformer(row, officeCode, sectionName, runId, districtId);
         transformers += 1;
         if (result.updated) updated += 1;
         if (result.historyRecorded) historyRecorded += 1;
