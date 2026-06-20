@@ -96,7 +96,7 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
         <div className="text-center space-y-2 mt-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-primary rounded-full text-sm font-bold">
             <Heart className="w-4 h-4 fill-current text-amber-500" />
-            <span>Support Solar Undo</span>
+            <span>Fuel Solar Undo</span>
           </div>
           <p className="text-sm text-muted-foreground max-w-[320px] mx-auto leading-relaxed">
             Help keep Solar Undo free and updated for everyone.
@@ -131,16 +131,36 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           </div>
         </div>
 
-        {/* QR Code */}
-        <div className="flex justify-center">
+        {/* QR Code and message */}
+        <div className="flex flex-col items-center gap-2">
           <SupportQR upiUrl={upiUrl} />
+          <p className="text-center text-xs text-muted-foreground max-w-[285px] leading-normal mt-1">
+            Every contribution helps keep Solar Undo free for Kerala solar applicants ❤️
+          </p>
         </div>
-
+        
         {/* Amount Selector */}
         <AmountSelector selectedAmount={amount} onChange={handleAmountChange} />
 
+        {/* Selected Tier Status */}
+        {(() => {
+          const selectedTier = SUPPORT_CONFIG.tiers.find(
+            (t) =>
+              (t.amount !== undefined && t.amount === amount) ||
+              (t.amount === undefined && amount !== undefined && !SUPPORT_CONFIG.tiers.some(x => x.amount === amount))
+          ) || (amount !== undefined ? SUPPORT_CONFIG.tiers.find(x => x.id === "custom") : null);
+
+          if (amount === undefined || !selectedTier) return null;
+
+          return (
+            <div className="text-center text-sm font-bold text-primary bg-primary/5 border border-primary/20 py-2 px-4 rounded-xl">
+              Selected: {selectedTier.emoji} {selectedTier.name} (₹{amount})
+            </div>
+          );
+        })()}
+
         {/* Payment Actions */}
-        <div className="space-y-3 mt-1">
+        <div className="space-y-3">
           {/* UPI ID display */}
           <div className="flex items-center justify-between gap-2 bg-muted border border-border rounded-xl px-3 py-2 text-sm font-semibold">
             <span className="text-muted-foreground select-all truncate">
