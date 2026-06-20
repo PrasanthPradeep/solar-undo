@@ -314,3 +314,13 @@
 .animate-accordion-up {
   animation: accordion-up 0.2s ease-out;
 }
+
+/* Download icon hover bounce */
+@keyframes download-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+}
+.group:hover .download-icon {
+  animation: download-bounce 1s infinite ease-in-out;
+}
+

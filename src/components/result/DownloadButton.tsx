@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useRef, useState } from "react";
+import { Download } from "lucide-react";
 import { useEligibilityStore } from "@/store/eligibility-store";
 import { downloadExportCard } from "@/lib/download-image";
 import { ExportCard } from "./ExportCard";
@@ -51,7 +52,7 @@ export default function DownloadButton() {
         <button
           onClick={handleDownload}
           disabled={loading}
-          className="w-full btn-solar rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed"
+          className="w-full btn-solar rounded-xl py-3.5 text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75 disabled:cursor-not-allowed group"
         >
           {loading ? (
             <>
@@ -60,7 +61,7 @@ export default function DownloadButton() {
             </>
           ) : (
             <>
-              <span>📸</span>
+              <Download className="h-4 w-4 download-icon transition-transform duration-200" />
               <span>Download PNG Result</span>
             </>
           )}
