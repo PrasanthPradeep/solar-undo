@@ -7,11 +7,32 @@ import { validateKsebId } from "@/utils/validators";
 
 /** Returns the distinct section_codes of all transformers already cached in the DB. */
 export async function getKnownSectionCodes(): Promise<string[]> {
-  const rows = await supabaseRest<Array<{ section_code: string }>>(
-    "transformers?select=section_code&order=section_code"
-  );
-  const unique = [...new Set(rows.map((r) => r.section_code))];
-  return unique;
+  try {
+    const rows = await supabaseRest<Array<{ section_code: string }>>(
+      "unique_sections?select=section_code"
+    );
+    return rows.map((r) => r.section_code);
+  } catch (error) {
+    console.warn("unique_sections view query failed, falling back to keyset pagination", error);
+    const uniqueCodes = new Set<string>();
+    let lastCode = "";
+    while (true) {
+      const filter = lastCode ? `&section_code=gt.${encodeURIComponent(lastCode)}` : "";
+      const rows = await supabaseRest<Array<{ section_code: string }>>(
+        `transformers?select=section_code&order=section_code&limit=1000${filter}`
+      );
+      if (!rows || rows.length === 0) break;
+      for (const r of rows) {
+        uniqueCodes.add(r.section_code);
+      }
+      const lastRow = rows[rows.length - 1];
+      if (lastRow) {
+        lastCode = lastRow.section_code;
+      }
+      if (rows.length < 1000) break;
+    }
+    return Array.from(uniqueCodes);
+  }
 }
 
 export interface CapacityTrendPoint {

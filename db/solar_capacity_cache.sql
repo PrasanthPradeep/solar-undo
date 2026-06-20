@@ -175,4 +175,11 @@ grant select, insert, update, delete on public.search_logs to service_role;
 
 alter table public.search_logs enable row level security;
 
+-- View to get unique section codes for coverage stats and sync filtering
+create or replace view public.unique_sections as
+select distinct section_code
+from public.transformers;
+
+grant select on public.unique_sections to service_role;
+
 notify pgrst, 'reload schema';

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { X, Copy, Check, ExternalLink, Heart } from "lucide-react";
+import { X, Copy, Check, ExternalLink, Heart, RotateCw } from "lucide-react";
 import { SUPPORT_CONFIG } from "@/config/support";
 import { generateUpiUrl } from "@/lib/generate-upi-url";
 import { trackEvent } from "@/lib/analytics";
@@ -22,11 +22,32 @@ interface Stats {
 export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<Stats>({
     transformersIndexed: 96790,
     sectionsIndexed: 774,
     districtsIndexed: 14,
   });
+
+  const handleRefreshStats = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    try {
+      const res = await fetch("/api/coverage-stats?bypass=true");
+      const data = await res.json();
+      if (data && data.available) {
+        setStats({
+          transformersIndexed: data.transformersIndexed || 96790,
+          sectionsIndexed: data.sectionsIndexed || 774,
+          districtsIndexed: data.districtsIndexed || 14,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to refresh coverage stats:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   // Fetch live stats when the modal opens
   useEffect(() => {
@@ -104,31 +125,41 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
         </div>
 
         {/* Database Stats */}
-        <div className="grid grid-cols-3 gap-2 bg-muted/50 border border-border/60 rounded-2xl p-3 text-center">
-          <div>
-            <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
-              {stats.transformersIndexed.toLocaleString("en-IN")}
+        <div className="relative group/stats">
+          <div className="grid grid-cols-3 gap-2 bg-muted/50 border border-border/60 rounded-2xl p-3 text-center">
+            <div>
+              <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
+                {stats.transformersIndexed.toLocaleString("en-IN")}
+              </div>
+              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                Transformers
+              </div>
             </div>
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
-              Transformers
+            <div className="border-x border-border/80">
+              <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
+                {stats.sectionsIndexed.toLocaleString("en-IN")}
+              </div>
+              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                Sections
+              </div>
+            </div>
+            <div>
+              <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
+                {stats.districtsIndexed.toLocaleString("en-IN")}
+              </div>
+              <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
+                Districts
+              </div>
             </div>
           </div>
-          <div className="border-x border-border/80">
-            <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
-              {stats.sectionsIndexed.toLocaleString("en-IN")}
-            </div>
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
-              Sections
-            </div>
-          </div>
-          <div>
-            <div className="text-sm sm:text-base font-extrabold text-foreground tracking-tight">
-              {stats.districtsIndexed.toLocaleString("en-IN")}
-            </div>
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mt-0.5">
-              Districts
-            </div>
-          </div>
+          <button
+            onClick={handleRefreshStats}
+            disabled={refreshing}
+            className="absolute -top-2.5 -right-1.5 p-1.5 bg-card border border-border hover:border-primary/50 text-muted-foreground hover:text-primary rounded-full shadow-sm transition-all duration-200 cursor-pointer disabled:opacity-60 z-10"
+            title="Refresh statistics"
+          >
+            <RotateCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
+          </button>
         </div>
 
         {/* QR Code and message */}
