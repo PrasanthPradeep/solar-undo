@@ -112,6 +112,7 @@ export default function AmountSelector({ selectedAmount, onChange }: AmountSelec
             placeholder="Enter amount"
             value={customVal}
             onChange={(e) => handleCustomChange(e.target.value)}
+            onWheel={(e) => e.currentTarget.blur()}
             className="input-premium w-full rounded-xl px-4 py-2.5 text-sm font-medium"
             autoFocus
           />
