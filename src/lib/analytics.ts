@@ -12,6 +12,7 @@ type AnalyticsEventName =
   | "support_modal_opened"
   | "support_amount_selected"
   | "support_upi_app_opened"
+  | "support_cashfree_opened"
   | "support_upi_copied";
 
 type AnalyticsEventParams = Record<string, string | number | boolean | null | undefined>;

@@ -4,6 +4,7 @@ export interface SupportTier {
   name: string;
   description: string;
   amount?: number;
+  cashfreeLink: string;
 }
 
 export const SUPPORT_CONFIG = {
@@ -16,13 +17,15 @@ export const SUPPORT_CONFIG = {
       name: "Chaya Break",
       description: "Helps cover hosting costs.",
       amount: 30,
+      cashfreeLink: "https://payments.cashfree.com/forms/chayabreak",
     },
     {
-      id: "porotta",
-      emoji: "🍛",
-      name: "Porotta Set",
+      id: "kanji",
+      emoji: "🍚",
+      name: "Kanji & Payar",
       description: "Keeps bug fixing sessions alive.",
       amount: 60,
+      cashfreeLink: "https://payments.cashfree.com/forms/kanji",
     },
     {
       id: "biriyani",
@@ -30,6 +33,7 @@ export const SUPPORT_CONFIG = {
       name: "Biriyani",
       description: "Weekend development fuel.",
       amount: 150,
+      cashfreeLink: "https://payments.cashfree.com/forms/fullbiriyani",
     },
     {
       id: "mandi",
@@ -37,6 +41,7 @@ export const SUPPORT_CONFIG = {
       name: "Kuzhi Mandi",
       description: "Supports new feature development.",
       amount: 250,
+      cashfreeLink: "https://payments.cashfree.com/forms/mandi",
     },
     {
       id: "sadya",
@@ -44,6 +49,7 @@ export const SUPPORT_CONFIG = {
       name: "Full Sadya",
       description: "Covers domain + infrastructure.",
       amount: 500,
+      cashfreeLink: "https://payments.cashfree.com/forms/sadhya",
     },
     {
       id: "custom",
@@ -51,6 +57,7 @@ export const SUPPORT_CONFIG = {
       name: "Custom Support",
       description: "Choose your own amount.",
       amount: undefined,
+      cashfreeLink: "https://payments.cashfree.com/forms/treat",
     },
   ] as SupportTier[],
 };

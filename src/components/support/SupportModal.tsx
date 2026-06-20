@@ -27,6 +27,14 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
 
   const upiUrl = generateUpiUrl(amount);
 
+  const selectedTier = SUPPORT_CONFIG.tiers.find(
+    (t) =>
+      (t.amount !== undefined && t.amount === amount) ||
+      (t.amount === undefined && amount !== undefined && !SUPPORT_CONFIG.tiers.some(x => x.amount === amount))
+  ) || SUPPORT_CONFIG.tiers.find(x => x.id === "custom");
+
+  const cashfreeLink = selectedTier?.cashfreeLink || "https://payments.cashfree.com/forms/treat";
+
   const handleCopy = () => {
     navigator.clipboard.writeText(SUPPORT_CONFIG.upiId);
     setCopied(true);
@@ -34,9 +42,13 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleOpenApp = () => {
-    trackEvent("support_upi_app_opened", { amount: amount ?? 0 });
-    window.location.href = upiUrl;
+  const handleOpenCashfree = () => {
+    trackEvent("support_cashfree_opened", {
+      amount: amount ?? 0,
+      tierId: selectedTier?.id || "custom",
+      link: cashfreeLink
+    });
+    window.open(cashfreeLink, "_blank", "noopener,noreferrer");
   };
 
   const handleAmountChange = (newAmount: number | undefined) => {
@@ -79,33 +91,28 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           </div>
         </div>
 
-        {/* QR Code and message */}
-        <div className="flex flex-col items-center gap-2">
+        {/* QR Code and message (Desktop: Show QR, Mobile: Hide QR) */}
+        <div className="hidden sm:flex flex-col items-center gap-2">
           <SupportQR upiUrl={upiUrl} />
-          <p className="text-center text-xs text-muted-foreground max-w-[285px] leading-normal mt-1">
-            Every contribution helps keep Solar Undo free for Kerala solar applicants ❤️
+          <p className="text-center text-[11px] text-muted-foreground max-w-[285px] leading-normal mt-1">
+            Scan the QR code to pay directly using UPI, or click the button below to pay on Cashfree platform.
           </p>
         </div>
-        
+
+        {/* Mobile-only message */}
+        <p className="sm:hidden text-center text-xs text-muted-foreground leading-normal px-2">
+          Every contribution helps keep Solar Undo free for Kerala solar applicants ❤️
+        </p>
+
         {/* Amount Selector */}
         <AmountSelector selectedAmount={amount} onChange={handleAmountChange} />
 
         {/* Selected Tier Status */}
-        {(() => {
-          const selectedTier = SUPPORT_CONFIG.tiers.find(
-            (t) =>
-              (t.amount !== undefined && t.amount === amount) ||
-              (t.amount === undefined && amount !== undefined && !SUPPORT_CONFIG.tiers.some(x => x.amount === amount))
-          ) || (amount !== undefined ? SUPPORT_CONFIG.tiers.find(x => x.id === "custom") : null);
-
-          if (amount === undefined || !selectedTier) return null;
-
-          return (
-            <div className="text-center text-sm font-bold text-primary bg-primary/5 border border-primary/20 py-2 px-4 rounded-xl">
-              Selected: {selectedTier.emoji} {selectedTier.name} (₹{amount})
-            </div>
-          );
-        })()}
+        {amount !== undefined && selectedTier && (
+          <div className="text-center text-sm font-bold text-primary bg-primary/5 border border-primary/20 py-2 px-4 rounded-xl">
+            Selected: {selectedTier.emoji} {selectedTier.name} {amount > 0 ? `(₹${amount})` : ""}
+          </div>
+        )}
 
         {/* Payment Actions */}
         <div className="space-y-3">
@@ -133,10 +140,14 @@ export default function SupportModal({ isOpen, onClose }: SupportModalProps) {
           </div>
 
           <button
-            onClick={handleOpenApp}
+            onClick={handleOpenCashfree}
             className="w-full btn-solar rounded-xl py-3.5 text-base font-bold flex items-center justify-center gap-2 cursor-pointer"
           >
-            <span>Open UPI App</span>
+            <span>
+              {amount !== undefined && selectedTier && selectedTier.id !== "custom"
+                ? `Contribute ₹${amount} on Cashfree`
+                : "Contribute on Cashfree"}
+            </span>
             <ExternalLink className="w-4 h-4" />
           </button>
         </div>
