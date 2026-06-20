@@ -8,7 +8,11 @@ type AnalyticsEventName =
   | "pdf_fetched"
   | "transformer_identified"
   | "solar_check"
-  | "result_shown";
+  | "result_shown"
+  | "support_modal_opened"
+  | "support_amount_selected"
+  | "support_upi_app_opened"
+  | "support_upi_copied";
 
 type AnalyticsEventParams = Record<string, string | number | boolean | null | undefined>;
 

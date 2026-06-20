@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import PwaRegistration from "@/components/common/PwaRegistration";
+import SupportButton from "@/components/support/SupportButton";
 import "./globals.css";
 
 const geistMono = Geist_Mono({
@@ -115,6 +116,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         {children}
         <PwaRegistration />
+        <SupportButton />
       </body>
       <Script
         src="https://www.googletagmanager.com/gtag/js?id=G-B7MGNTVSGV"
