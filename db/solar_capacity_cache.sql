@@ -79,6 +79,7 @@ create table if not exists public.consumer_transformers (
   consumer_no text primary key,
   transformer_name text not null,
   transformer_id uuid references public.transformers(id) on delete set null,
+  feeder_name text,
   section_code text not null,
   consumer_name text,
   section_name text,
@@ -107,6 +108,9 @@ alter table public.consumer_transformers
 
 alter table public.consumer_transformers
   add column if not exists office_phone text;
+
+alter table public.consumer_transformers
+  add column if not exists feeder_name text;
 
 alter table public.consumer_transformers
   add column if not exists last_seen timestamptz not null default now();

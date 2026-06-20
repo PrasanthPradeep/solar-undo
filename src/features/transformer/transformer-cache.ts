@@ -60,6 +60,7 @@ interface ConsumerTransformerRow {
   consumer_no: string;
   transformer_name: string;
   transformer_id: string | null;
+  feeder_name?: string | null;
   section_code: string;
   updated_at: string;
   last_seen?: string;
@@ -381,6 +382,7 @@ export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobil
       consumer_no: data.consumerNumber,
       transformer_name: data.transformerName,
       transformer_id: transformer.id,
+      feeder_name: data.feederName,
       section_code: data.officeCode,
       consumer_name: data.consumerName,
       section_name: data.sectionName,
