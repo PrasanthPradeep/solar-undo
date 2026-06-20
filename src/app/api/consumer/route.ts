@@ -8,15 +8,32 @@ export async function POST(request: Request) {
   const { consumerNumber, mobile, phone, captchaUniqueIdHidden, code } = body;
 
   if (consumerNumber && !captchaUniqueIdHidden && !code) {
+    const enteredMobile = String(mobile ?? phone ?? "").trim();
+    if (!enteredMobile) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Mobile number is required to check cached records.",
+          stage: "cache-miss",
+        },
+        { status: 400 }
+      );
+    }
+
     const cached = await getCachedAvailabilityByConsumer(String(consumerNumber));
     if (cached) {
-      return NextResponse.json({ success: true, data: cached });
+      const normalize = (num: string) => num.replace(/\D/g, "").slice(-10);
+      const cachedMobile = cached.mobile ? String(cached.mobile) : "";
+
+      if (cachedMobile && normalize(enteredMobile) === normalize(cachedMobile)) {
+        return NextResponse.json({ success: true, data: cached });
+      }
     }
 
     return NextResponse.json(
       {
         success: false,
-        error: "Transformer mapping not found. Verification is required once for this consumer.",
+        error: "Transformer mapping not found or mobile number mismatch. Verification is required.",
         stage: "cache-miss",
       },
       { status: 404 }

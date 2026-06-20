@@ -35,7 +35,12 @@ export async function POST(request: Request) {
 
     const cached = await getCachedAvailabilityByConsumer(consumerNumber);
     if (cached) {
-      return NextResponse.json({ success: true, data: cached });
+      const normalize = (num: string) => num.replace(/\D/g, "").slice(-10);
+      const cachedMobile = cached.mobile ? String(cached.mobile) : "";
+
+      if (cachedMobile && normalize(phone) === normalize(cachedMobile)) {
+        return NextResponse.json({ success: true, data: cached });
+      }
     }
 
     if (!jsessionId) {

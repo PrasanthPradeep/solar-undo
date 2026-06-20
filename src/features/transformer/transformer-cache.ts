@@ -305,6 +305,7 @@ export async function getCachedAvailabilityByConsumer(consumerNo: string) {
       office_phone: mapping.office_phone ?? "",
       billNo: mapping.bill_no ?? "",
       tariff: mapping.tariff ?? "",
+      mobile: mapping.mobile ?? "",
       source: "cache" as const,
       history: analytics.trend,
       capacityChange: analytics.change,

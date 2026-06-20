@@ -31,7 +31,7 @@ export default function ConsumerForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validate()) return;
+    if (!validate({ requireMobile: true })) return;
     trackEvent("consumer_details_submitted");
     setConsumerDetails(consumerNumber, mobileNumber);
     setLoading(true);
@@ -40,7 +40,7 @@ export default function ConsumerForm() {
       const response = await fetch("/api/consumer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ consumerNumber }),
+        body: JSON.stringify({ consumerNumber, mobile: mobileNumber }),
       });
       const result = await response.json();
 
@@ -145,7 +145,6 @@ export default function ConsumerForm() {
       <div className="space-y-1.5">
         <label htmlFor="mobile-number" className="block text-base font-medium text-foreground">
           Registered Mobile Number
-          <span className="ml-1 text-xs font-normal text-muted-foreground">(needed once if uncached)</span>
         </label>
         <input
           id="mobile-number"
