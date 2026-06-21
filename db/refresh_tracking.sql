@@ -95,6 +95,7 @@ create policy "Allow public read access to refresh_changes"
 -- Grant privileges to service_role
 grant select, insert, update, delete on public.refresh_runs to service_role;
 grant select, insert, update, delete on public.refresh_changes to service_role;
+grant usage, select on sequence public.refresh_changes_id_seq to service_role;
 grant select, insert, update, delete on public.district_refresh_progress to service_role;
 
 -- Performance Indexes

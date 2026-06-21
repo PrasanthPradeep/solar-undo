@@ -10,6 +10,29 @@
 !.yarn/releases
 !.yarn/versions
 
+# Block all hidden folders by default
+.*/
+
+# Block all hidden root-level files by default
+.*
+
+# Explicitly allow vital open-source infrastructure and configs
+!.gitignore
+!.github/
+!.vscode/
+
+# Block personal VS Code overrides & local history
+.vscode/tasks.json
+.vscode/settings.json
+.vscode/.history/
+
+# 5. Hard safety net for secrets and OS-specific junk
+.env
+.env.local
+.DS_Store
+Thumbs.db
+
+
 # testing
 /coverage
 

@@ -86,12 +86,17 @@ export async function startRefreshRun(options: {
     console.error("Failed to clean up stale runs (non-fatal):", error);
   }
 
-  // Retention Policy: Delete refresh_changes records older than 180 days
+  // Retention Policy: Delete refresh_changes records older than 30 days
   try {
-    const retentionDate = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString();
-    await supabaseRest(`refresh_changes?changed_at=lt.${encodeURIComponent(retentionDate)}`, {
-      method: "DELETE",
-    });
+    const retentionDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const deleted = await supabaseRest<Array<{ id: number }>>(
+      `refresh_changes?changed_at=lt.${encodeURIComponent(retentionDate)}&select=id`,
+      {
+        method: "DELETE",
+        prefer: "return=representation",
+      }
+    );
+    console.log(`Deleted ${deleted?.length ?? 0} expired refresh change records`);
   } catch (error) {
     console.error("Failed to prune old refresh changes (non-fatal):", error);
   }
