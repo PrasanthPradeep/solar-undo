@@ -146,20 +146,20 @@ export default function CapacityCard({
         {derivedStatus === "AVAILABLE" && (
           <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
             <a
-              href="https://ekiran.kseb.in/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 shadow-sm ring-1 ring-orange-200 transition-colors hover:bg-orange-50 sm:w-auto"
-            >
-              Apply on KSEB e-Kiran
-            </a>
-            <a
               href="https://pmsuryaghar.gov.in/"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 shadow-sm ring-1 ring-orange-200 transition-colors hover:bg-orange-50 sm:w-auto"
             >
-              PM Surya Ghar
+              Apply on PM Surya Ghar
+            </a>
+            <a
+              href="https://ekiran.kseb.in/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-white px-5 py-3 text-sm font-semibold text-orange-700 shadow-sm ring-1 ring-orange-200 transition-colors hover:bg-orange-50 sm:w-auto"
+            >
+              KSEB e-Kiran Portal
             </a>
           </div>
         )}
