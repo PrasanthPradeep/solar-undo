@@ -593,6 +593,7 @@ export async function refreshTransformer(
   runId?: string | null,
   districtId?: number | null
 ) {
+  console.log("refreshTransformer RUN_ID:", runId);
   const existing = await findTransformer(sectionCode, row.transformerName);
   const saved = await upsertTransformer(row, sectionCode, sectionName);
   const transformer = saved[0];
@@ -607,7 +608,7 @@ export async function refreshTransformer(
 
   const changed = !previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot);
 
-  if (previousSnapshot && changed && runId) {
+  if (changed && runId) {
     const changesList = [];
     const fieldsToCompare: Array<{ key: keyof HistorySnapshot; label: string }> = [
       { key: "availableKw", label: "available_capacity" },
@@ -619,9 +620,9 @@ export async function refreshTransformer(
     ];
 
     for (const field of fieldsToCompare) {
-      const oldValue = previousSnapshot[field.key];
+      const oldValue = previousSnapshot ? previousSnapshot[field.key] : 0;
       const newValue = snapshot[field.key];
-      if (oldValue !== newValue) {
+      if (!previousSnapshot || oldValue !== newValue) {
         changesList.push({
           run_id: runId,
           district_id: districtId || null,
@@ -651,7 +652,8 @@ export async function refreshTransformer(
   }
 
   return {
-    updated: changed,
+    updated: !!previousSnapshot && changed,
+    inserted: !previousSnapshot,
     historyRecorded,
   };
 }
@@ -664,6 +666,7 @@ export async function syncSectionTransformers(
   runId?: string | null,
   districtId?: number | null
 ) {
+  console.log("syncSectionTransformers RUN_ID:", runId);
   // 1. Fetch all existing cached transformers for this section
   const existingTransformers = await supabaseRest<TransformerRow[]>(
     `transformers?section_code=eq.${encodeURIComponent(officeCode)}&select=*`
@@ -862,10 +865,14 @@ export async function syncSectionTransformers(
           }
 
           if (!previousSnapshot || !snapshotsEqual(previousSnapshot, snapshot)) {
-            updated += 1;
+            if (!previousSnapshot) {
+              inserted += 1;
+            } else {
+              updated += 1;
+            }
 
             // Track exactly what changed in refresh_changes
-            if (previousSnapshot && runId) {
+            if (runId) {
               const changesList = [];
               const fieldsToCompare: Array<{ key: keyof HistorySnapshot; label: string }> = [
                 { key: "availableKw", label: "available_capacity" },
@@ -877,9 +884,9 @@ export async function syncSectionTransformers(
               ];
 
               for (const field of fieldsToCompare) {
-                const oldValue = previousSnapshot[field.key];
+                const oldValue = previousSnapshot ? previousSnapshot[field.key] : 0;
                 const newValue = snapshot[field.key];
-                if (oldValue !== newValue) {
+                if (!previousSnapshot || oldValue !== newValue) {
                   changesList.push({
                     run_id: runId,
                     district_id: districtId || null,
@@ -924,6 +931,7 @@ export async function syncSectionTransformers(
         const result = await refreshTransformer(row, officeCode, sectionName, runId, districtId);
         transformers += 1;
         if (result.updated) updated += 1;
+        if (result.inserted) inserted += 1;
         if (result.historyRecorded) historyRecorded += 1;
       }
     }
