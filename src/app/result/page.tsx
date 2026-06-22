@@ -110,7 +110,7 @@ export default function ResultPage() {
               ☀️ Check Another Consumer
             </button>
 
-            {/* <a
+            <a
               href="https://wss.kseb.in/selfservices/reCap"
               target="_blank"
               rel="noopener noreferrer"
@@ -119,7 +119,7 @@ export default function ResultPage() {
               style={{ borderColor: "var(--border)" }}
             >
               View Full RES Data ↗
-            </a> */}
+            </a>
           </div>
         </div>
 
