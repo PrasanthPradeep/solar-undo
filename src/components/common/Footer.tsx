@@ -25,7 +25,7 @@ export default function Footer() {
       <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 sm:flex-1">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <p className="text-sm font-bold text-foreground">Solar Undo</p>
+            <p className="text-sm font-bold text-foreground">Solar Undo?</p>
             <span className="hidden text-muted-foreground sm:inline">•</span>
             <p className="text-xs text-muted-foreground">
               Check KSEB rooftop solar capacity with transformer-level accuracy.  <span className="hidden text-muted-foreground sm:inline">•</span>  Not affiliated with KSEB. Data may change without notice. © 2026 Solar Undo
