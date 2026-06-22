@@ -40,7 +40,7 @@ export default function Footer() {
               Terms of Use
             </Link>
             <span>•</span>
-            <a href="mailto:hello@prasanthp.tech" className="hover:text-primary transition-colors">
+            <a href="mailto:contact@prasanthp.tech" className="hover:text-primary transition-colors">
               Contact
             </a>
           </div>
