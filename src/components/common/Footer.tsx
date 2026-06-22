@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { AtSign, Code2, Globe2 } from "lucide-react";
 
 const creatorLinks = [
@@ -30,9 +31,19 @@ export default function Footer() {
               Check KSEB rooftop solar capacity with transformer-level accuracy.  <span className="hidden text-muted-foreground sm:inline">•</span>  Not affiliated with KSEB. Data may change without notice. © 2026 Solar Undo
             </p>
           </div>
-          {/* <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Not affiliated with KSEB. Data may change without notice. © 2026 Solar Undo
-          </p> */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-xs text-muted-foreground">
+            <Link href="/privacy" className="hover:text-primary transition-colors">
+              Privacy Policy
+            </Link>
+            <span>•</span>
+            <Link href="/terms" className="hover:text-primary transition-colors">
+              Terms of Use
+            </Link>
+            <span>•</span>
+            <a href="mailto:hello@prasanthp.tech" className="hover:text-primary transition-colors">
+              Contact
+            </a>
+          </div>
         </div>
 
         <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-end sm:gap-3">

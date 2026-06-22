@@ -1,9 +1,19 @@
+import crypto from "crypto";
 import { calculateSolarEligibility } from "@/features/solar/solar-calculator";
 import { SolarAvailabilityResponse } from "@/integrations/kseb/solar-availability";
 import { normalizeTransformerName, ResTransformerCapacity } from "@/integrations/kseb/res-capacity";
 import { getOfficeList, DISTRICT_ID_TO_NAME } from "@/integrations/kseb/office-map";
 import { supabaseCount, supabaseRest, SupabaseUnavailableError } from "@/integrations/supabase/client";
 import { validateKsebId } from "@/utils/validators";
+
+export function hashMobile(mobile: string): string {
+  const normalized = mobile.replace(/\D/g, "").slice(-10);
+  return crypto
+    .createHash("sha256")
+    .update(normalized)
+    .digest("hex");
+}
+
 
 /** Returns the distinct section_codes of all transformers already cached in the DB. */
 export async function getKnownSectionCodes(): Promise<string[]> {
@@ -79,18 +89,13 @@ interface TransformerRow {
 
 interface ConsumerTransformerRow {
   consumer_no: string;
-  transformer_name: string;
+  mobile_hash?: string | null;
   transformer_id: string | null;
-  feeder_name?: string | null;
   section_code: string;
   updated_at: string;
   last_seen?: string;
-  consumer_name?: string | null;
+  expires_at?: string;
   section_name?: string | null;
-  tariff?: string | null;
-  bill_no?: string | null;
-  mobile?: string | null;
-  office_phone?: string | null;
   transformers?: TransformerRow | null;
 }
 
@@ -301,10 +306,10 @@ export async function updateLastSeen(consumerNo: string) {
   }
 }
 
-export async function getCachedAvailabilityByConsumer(consumerNo: string) {
+export async function getCachedAvailabilityByConsumer(consumerNo: string, mobileHash: string) {
   try {
     const rows = await supabaseRest<ConsumerTransformerRow[]>(
-      `consumer_transformers?consumer_no=eq.${encodeURIComponent(consumerNo)}` +
+      `consumer_transformers?consumer_no=eq.${encodeURIComponent(consumerNo)}&mobile_hash=eq.${encodeURIComponent(mobileHash)}` +
         "&select=*,transformers(*)&limit=1"
     );
     const mapping = rows[0];
@@ -320,13 +325,13 @@ export async function getCachedAvailabilityByConsumer(consumerNo: string) {
 
     return {
       ...availability,
-      consumerName: mapping.consumer_name ?? "Returning consumer",
+      consumerName: "Returning consumer",
       consumerNumber: mapping.consumer_no,
       sectionName: mapping.section_name ?? availability.sectionName,
-      office_phone: mapping.office_phone ?? "",
-      billNo: mapping.bill_no ?? "",
-      tariff: mapping.tariff ?? "",
-      mobile: mapping.mobile ?? "",
+      office_phone: "",
+      billNo: "",
+      tariff: "",
+      mobile: "",
       source: "cache" as const,
       history: analytics.trend,
       capacityChange: analytics.change,
@@ -402,18 +407,13 @@ export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobil
 
     const fullMapping = {
       consumer_no: data.consumerNumber,
-      transformer_name: data.transformerName,
+      mobile_hash: mobile ? hashMobile(mobile) : null,
       transformer_id: transformer.id,
-      feeder_name: data.feederName,
       section_code: data.officeCode,
-      consumer_name: data.consumerName,
       section_name: data.sectionName,
-      tariff: data.tariff,
-      bill_no: data.billNo,
-      mobile: mobile ?? null,
-      office_phone: data.office_phone,
       updated_at: new Date().toISOString(),
       last_seen: new Date().toISOString(),
+      expires_at: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
     };
 
     try {
@@ -431,7 +431,6 @@ export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobil
         body: [
           {
             consumer_no: fullMapping.consumer_no,
-            transformer_name: fullMapping.transformer_name,
             transformer_id: fullMapping.transformer_id,
             section_code: fullMapping.section_code,
             updated_at: fullMapping.updated_at,

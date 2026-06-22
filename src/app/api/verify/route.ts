@@ -5,6 +5,7 @@ import {
   enrichWithHistory,
   findTransformer,
   getCachedAvailabilityByConsumer,
+  hashMobile,
   logSearch,
   saveConsumerMapping,
 } from "@/features/transformer/transformer-cache";
@@ -33,14 +34,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const cached = await getCachedAvailabilityByConsumer(consumerNumber);
+    const mobileHash = hashMobile(phone);
+    const cached = await getCachedAvailabilityByConsumer(consumerNumber, mobileHash);
     if (cached) {
-      const normalize = (num: string) => num.replace(/\D/g, "").slice(-10);
-      const cachedMobile = cached.mobile ? String(cached.mobile) : "";
-
-      if (cachedMobile && normalize(phone) === normalize(cachedMobile)) {
-        return NextResponse.json({ success: true, data: cached });
-      }
+      return NextResponse.json({ success: true, data: cached });
     }
 
     if (!jsessionId) {
