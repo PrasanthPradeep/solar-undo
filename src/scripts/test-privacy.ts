@@ -6,9 +6,9 @@ const BASE_URL = `http://localhost:${PORT}`;
 async function test() {
   console.log("Starting end-to-end privacy validation tests...");
 
-  // We will use one of the migrated records: consumer "1145665010696", mobile "9387942784"
-  const testConsumer = "1145665010696";
-  const testMobile = "9387942784";
+  // We will use one of the migrated records: consumer "1146198003858", mobile "9539849614"
+  const testConsumer = "1146198003858";
+  const testMobile = "9539849614";
   const wrongMobile = "9999999999";
 
   try {
@@ -27,6 +27,9 @@ async function test() {
     console.log("Response data:", JSON.stringify(data1, null, 2));
     if (!data1.success || data1.data?.consumerNumber !== testConsumer) {
       throw new Error("Validation failed: expected success and matching consumerNumber.");
+    }
+    if (data1.data?.office_phone !== "0469-2666763") {
+      throw new Error(`Validation failed: expected office_phone to be '0469-2666763', but got '${data1.data?.office_phone}'.`);
     }
     console.log("✓ Cache Hit test passed!");
 

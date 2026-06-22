@@ -96,6 +96,7 @@ interface ConsumerTransformerRow {
   last_seen?: string;
   expires_at?: string;
   section_name?: string | null;
+  office_phone?: string | null;
   transformers?: TransformerRow | null;
 }
 
@@ -328,7 +329,7 @@ export async function getCachedAvailabilityByConsumer(consumerNo: string, mobile
       consumerName: "Returning consumer",
       consumerNumber: mapping.consumer_no,
       sectionName: mapping.section_name ?? availability.sectionName,
-      office_phone: "",
+      office_phone: mapping.office_phone ?? "",
       billNo: "",
       tariff: "",
       mobile: "",
@@ -411,6 +412,7 @@ export async function saveConsumerMapping(data: SolarAvailabilityResponse, mobil
       transformer_id: transformer.id,
       section_code: data.officeCode,
       section_name: data.sectionName,
+      office_phone: data.office_phone,
       updated_at: new Date().toISOString(),
       last_seen: new Date().toISOString(),
       expires_at: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),

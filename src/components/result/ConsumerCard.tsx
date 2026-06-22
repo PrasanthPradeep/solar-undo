@@ -6,11 +6,11 @@ interface Props {
 
 export default function ConsumerCard({ consumer }: Props) {
   const fields = [
-    { label: "Consumer Name", value: consumer.consumerName || "—" },
+    // { label: "Consumer Name", value: consumer.consumerName || "—" },
     { label: "Consumer No.", value: consumer.consumerNumber || "—", mono: true },
     { label: "Section", value: consumer.section || "—" },
-    { label: "Tariff", value: consumer.tariff || "—" },
-    { label: "Bill No.", value: consumer.billNo || "—", mono: true },
+    // { label: "Tariff", value: consumer.tariff || "—" },
+    // { label: "Bill No.", value: consumer.billNo || "—", mono: true },
     { label: "Office Phone", value: consumer.office_phone || "—", mono: true },
   ];
 
